@@ -1,13 +1,17 @@
 # 💎 AurumSilver ERP — Enterprise Jewelry Billing, Inventory & QR Verification Platform
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Prisma ORM](https://img.shields.io/badge/Prisma-5.19-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
-[![Neon PostgreSQL](https://img.shields.io/badge/Neon_DB-Serverless_PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=black)](https://neon.tech/)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js" alt="Next.js" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.6-blue?style=for-the-badge&logo=typescript" alt="TypeScript" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind CSS" /></a>
+  <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/Prisma-5.19-2D3748?style=for-the-badge&logo=prisma" alt="Prisma ORM" /></a>
+  <a href="https://neon.tech/"><img src="https://img.shields.io/badge/Neon_DB-Serverless_PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=black" alt="Neon PostgreSQL" /></a>
+  <a href="https://vercel.com/"><img src="https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel" alt="Vercel" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
+</p>
+
+---
 
 **AurumSilver ERP** is a modern, high-speed, enterprise-grade cloud POS, inventory management, and digital certification platform engineered specifically for **Silver Jewelry Retailers, Bullion Merchants, Silverware Showrooms, and Goldsmiths**.
 
@@ -195,8 +199,8 @@ SilverBillingSoftware/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/silver-billing-software.git
-cd silver-billing-software
+git clone https://github.com/ahmedthousifgit571/silver-shop-software.git
+cd silver-shop-software
 ```
 
 ### 2. Install Dependencies
@@ -253,17 +257,14 @@ This application is 100% full-stack and designed for zero-configuration deployme
 
 ### Step 1: Push Repository to GitHub
 ```bash
-git init
 git add .
-git commit -m "feat: complete enterprise silver billing software"
-git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/silver-billing-software.git
-git push -u origin main
+git commit -m "docs: update enterprise README with badges and architecture"
+git push origin main
 ```
 
 ### Step 2: Import Project on Vercel
 1. Navigate to [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New... $\rightarrow$ Project**.
-2. Select your `silver-billing-software` GitHub repository and click **Import**.
+2. Select your `silver-shop-software` GitHub repository and click **Import**.
 
 ### Step 3: Set Environment Variables
 Add the following keys under the **Environment Variables** panel:
@@ -326,5 +327,3 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 <p align="center">
   <b>Built for modern jewelry showrooms and goldsmiths.</b>
 </p>
-#   s i l v e r - s h o p - s o f t w a r e  
- 
