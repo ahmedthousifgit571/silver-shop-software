@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id                  String        @id @default(cuid())
+  sku                 String        @unique // e.g. SLV-ANK-925-001
+  name                String
+  category            String        // Anklets, Rings, Chains, Utensils, Idols, Coins, Giftware
+  metalType           String        @default("SILVER") // SILVER, GOLD, DIAMOND, UTENSIL
+  description         String?
+  grossWeight         Float         // in grams
+  stoneWeight         Float         @default(0) // in grams
+  netWeight           Float         // in grams (grossWeight - stoneWeight)
+  purity              Float         // e.g. 92.5, 99.9, 80.0
+  purityGrade         String        @default("925 Sterling")
+  purchaseRatePerGram Float         @default(75.0) // Purchase / cost price per gram
+  sellingPriceFixed   Float?        // Optional fixed MRP
+  wastagePercentage   Float         @default(0.0)  // Wastage / VA %
+  makingChargeType    String        @default("PER_GRAM") // "PER_GRAM", "FLAT", "PERCENT"
+  makingChargeValue   Float         @default(0)
+  gstPercentage       Float         @default(3.0)  // default 3% GST
+  imageUrl            String?       // Cloudinary Image URL
+  stockQuantity       Int           @default(1)
+  minStockAlert       Int           @default(2)
+  qrCodeUrl           String?       // Base64 or cached QR SVG
+  isActive            Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  invoiceItems        InvoiceItem[]
+
+  @@index([sku])
+  @@index([category])
+  @@index([metalType])
+}
+
+model Customer {
+  id                 String              @id @default(cuid())
+  name               String
+  phone              String              @unique
+  email              String?
+  address            String?
+  gstin              String?
+  pan                String?
+  totalSpend         Float               @default(0)
+  totalBills         Int                 @default(0)
+  advanceBalance     Float               @default(0) // Customer advance deposited
+  outstandingBalance Float               @default(0) // Customer credit / due
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  invoices           Invoice[]
+  khataTransactions  KhataTransaction[]
+
+  @@index([phone])
+}
+
+model KhataTransaction {
+  id               String    @id @default(cuid())
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  date             DateTime  @default(now())
+  type             String    // 'BILL_DEBIT', 'PAYMENT_CREDIT', 'ADVANCE_DEPOSIT'
+  amount           Float
+  paymentMode      String    @default("CASH") // CASH, UPI, BANK
+  referenceInvoice String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+
+  @@index([customerId])
+}
+
+model PurchaseStockIn {
+  id                  String    @id @default(cuid())
+  vendorName          String
+  date                DateTime  @default(now())
+  productSku          String
+  productName         String
+  quantity            Int       @default(1)
+  weightGrams         Float
+  purity              Float
+  purchaseRatePerGram Float
+  totalCost           Float
+  invoiceRef          String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+
+  @@index([vendorName])
+  @@index([productSku])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique // e.g. INV-2026-0001
+  invoiceType     String        @default("TAX_INVOICE") // TAX_INVOICE, NON_GST_BILL, ESTIMATE_QUOTATION
+  taxType         String        @default("INTRA_STATE") // INTRA_STATE (CGST+SGST), INTER_STATE (IGST), NONE
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  customerName    String
+  customerPhone   String
+  customerAddress String?
+  
+  date            DateTime      @default(now())
+  subtotal        Float
+  wastageTotal    Float         @default(0)
+  makingCharges   Float         @default(0)
+  discount        Float         @default(0)
+  
+  // Old Silver Exchange deduction
+  oldSilverWeight Float         @default(0)
+  oldSilverRate   Float         @default(0)
+  oldSilverValue  Float         @default(0)
+  
+  taxableAmount   Float
+  cgst            Float         @default(0) // 1.5%
+  sgst            Float         @default(0) // 1.5%
+  igst            Float         @default(0) // 3% for inter-state
+  grandTotal      Float
+  
+  paymentMode     String        // CASH, UPI, CARD, SPLIT, KHATA, ADVANCE_ADJUST
+  paymentStatus   String        @default("PAID") // PAID, PARTIAL, DUE
+  paidAmount      Float         @default(0)
+  costOfGoodsSold Float         @default(0) // Product cost for profit reporting
+  profit          Float         @default(0) // Net profit
+  notes           String?
+  
+  items           InvoiceItem[]
+  createdAt       DateTime      @default(now())
+
+  @@index([invoiceNumber])
+  @@index([customerPhone])
+  @@index([date])
+  @@index([invoiceType])
+}
+
+model InvoiceItem {
+  id                String        @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId         String?
+  product           Product?      @relation(fields: [productId], references: [id])
+  productName       String
+  productSku        String
+  quantity          Int           @default(1)
+  grossWeight       Float
+  netWeight         Float
+  purity            Float
+  silverRateApplied Float         // Rate per gram on sale day
+  wastageAmount     Float         @default(0)
+  makingCharge      Float
+  stoneCharges      Float         @default(0)
+  totalPrice        Float
+  hsnCode           String        @default("7113")
+  qrCodeUrl         String?       // QR Code URL embedded in receipt
+
+  @@index([invoiceId])
+}
+
+model SilverRate {
+  id               String        @id @default("default")
+  fineRate999      Float         @default(96.0) // ₹ per gram
+  sterlingRate925  Float         @default(89.0) // ₹ per gram
+  utensilRate800   Float         @default(77.0) // ₹ per gram
+  goldRate916      Float         @default(7150.0) // ₹ per gram (22K Gold)
+  scrapRateBuyback Float         @default(81.0) // ₹ per gram
+  lastUpdated      DateTime      @default(now())
+}
+
+model ShopConfig {
+  id          String   @id @default("default")
+  shopName    String   @default("SRI SHUBHAM SILVER JEWELS")
+  tagline     String   @default("Pure Silver Ornaments, Pooja Articles & Fine Silverware")
+  gstin       String?  @default("29AABCU9603R1ZM")
+  hsnCode     String   @default("7113")
+  phone       String   @default("+91 98765 43210")
+  email       String?  @default("contact@shubhamsilver.com")
+  address     String   @default("#42, Car Street, Near Temple, City - 560001")
+  logoUrl     String?
+  terms       String?  @default("1. Goods once sold will be exchanged within 7 days against invoice. 2. Silver purity certified as per hallmark standards.")
+}
