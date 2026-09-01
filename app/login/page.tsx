@@ -49,7 +49,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 text-white shadow-sm mb-2">
             <Gem className="w-6 h-6 text-slate-200" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Sri Shubham Silver</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Kushal Jewellerys</h1>
           <p className="text-xs text-slate-500 font-medium">
             Jewellery Store Management, POS Billing & Vault Control
           </p>

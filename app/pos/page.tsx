@@ -40,6 +40,7 @@ function POSBillingContent() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [rates, setRates] = useState<SilverRates>(initialRates);
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [shopConfig, setShopConfig] = useState<ShopConfig>(initialShopConfig);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -102,6 +103,15 @@ function POSBillingContent() {
         if (data && data.fineRate999) {
           setRates(data);
           setOldSilver((prev) => ({ ...prev, meltRatePerGram: data.scrapRateBuyback }));
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.shopName) {
+          setShopConfig(data);
         }
       })
       .catch(() => {});
@@ -356,7 +366,7 @@ function POSBillingContent() {
     return (
       <PDFInvoiceView
         invoice={completedInvoice}
-        config={initialShopConfig}
+        config={shopConfig}
         onBack={() => {
           setCompletedInvoice(null);
           setCart([]);

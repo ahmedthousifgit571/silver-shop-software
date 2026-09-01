@@ -173,14 +173,21 @@ model SilverRate {
 }
 
 model ShopConfig {
-  id          String   @id @default("default")
-  shopName    String   @default("SRI SHUBHAM SILVER JEWELS")
-  tagline     String   @default("Pure Silver Ornaments, Pooja Articles & Fine Silverware")
-  gstin       String?  @default("29AABCU9603R1ZM")
-  hsnCode     String   @default("7113")
-  phone       String   @default("+91 98765 43210")
-  email       String?  @default("contact@shubhamsilver.com")
-  address     String   @default("#42, Car Street, Near Temple, City - 560001")
-  logoUrl     String?
-  terms       String?  @default("1. Goods once sold will be exchanged within 7 days against invoice. 2. Silver purity certified as per hallmark standards.")
+  id           String   @id @default("default")
+  shopName     String   @default("KUSHAL JEWELLERYS")
+  legalName    String?  @default("DASS GHNANABAVARI")
+  tagline      String   @default("Pure Silver Ornaments, Pooja Articles & Fine Silverware")
+  gstin        String?  @default("37AVEPG9436B1ZP")
+  hsnCode      String   @default("7113")
+  phone        String   @default("+91 98765 43210")
+  email        String?  @default("sales@kushaljewellerys.com")
+  address      String   @default("#3-550, Ground Floor, Bazar Street, Revenue Ward No 3, Srikalahasti, Tirupati Dist., Andhra Pradesh - 517644")
+  city         String?  @default("Srikalahasti")
+  district     String?  @default("Tirupati")
+  state        String?  @default("Andhra Pradesh")
+  stateCode    String?  @default("37")
+  pincode      String?  @default("517644")
+  logoUrl      String?
+  terms        String?  @default("1. Goods once sold will be exchanged within 7 days against original invoice. 2. Purity certified as per Hallmark standards. 3. Silver rates calculated on date of billing.")
+  printerWidth String?  @default("80mm")
 }

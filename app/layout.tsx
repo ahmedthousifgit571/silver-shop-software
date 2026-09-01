@@ -4,7 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
-  title: 'Sri Shubham Silver | Retail POS & Inventory Management',
+  title: 'Kushal Jewellerys | Retail POS & Inventory Management',
   description: 'Fast Point of Sale Billing, Real-time Silver Rate Engine, Stock Control & Khata CRM for Silver Jewellery Stores',
 };
 

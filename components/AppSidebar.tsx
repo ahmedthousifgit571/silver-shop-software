@@ -63,7 +63,7 @@ export default function AppSidebar({
           {!isCollapsed && (
             <div className="min-w-0">
               <h1 className="font-bold text-sm text-slate-900 truncate leading-tight tracking-tight">
-                Sri Shubham Silver
+                Kushal Jewellerys
               </h1>
               <p className="text-[11px] text-slate-500 truncate font-medium">Store POS & Vault</p>
             </div>

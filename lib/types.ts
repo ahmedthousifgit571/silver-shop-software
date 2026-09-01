@@ -150,12 +150,17 @@ export interface SilverRates {
 
 export interface ShopConfig {
   shopName: string;
+  legalName?: string;
   tagline: string;
   gstin: string;
   hsnCode: string;
   phone: string;
   email: string;
   address: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   logoUrl?: string;
   terms: string;
+  printerWidth?: '80mm' | '58mm';
 }

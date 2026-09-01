@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Printer, Download, Share2, ArrowLeft, QrCode, Sparkles, Check, FileText } from 'lucide-react';
+import { Printer, Download, Share2, ArrowLeft, QrCode, Sparkles, Check, FileText, Receipt } from 'lucide-react';
 import { Invoice, ShopConfig } from '@/lib/types';
 import { generateProductQRCode } from '@/lib/qr';
 import { generateInvoicePDF } from '@/lib/pdf';
+import ThermalReceiptView from '@/components/ThermalReceiptView';
 
 interface PDFInvoiceViewProps {
   invoice: Invoice;
@@ -14,6 +15,7 @@ interface PDFInvoiceViewProps {
 
 export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceViewProps) {
   const [itemQRs, setItemQRs] = useState<{ [sku: string]: string }>({});
+  const [viewMode, setViewMode] = useState<'A4' | 'THERMAL'>('A4');
 
   useEffect(() => {
     const generateAll = async () => {
@@ -37,9 +39,34 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
     doc.save(`${invoice.invoiceNumber}.pdf`);
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
+    const cleanPhone = invoice.customerPhone.replace(/\D/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+    // Check if device supports native file sharing (e.g. mobile phone / tablet)
+    try {
+      const doc = await generateInvoicePDF(invoice, config);
+      const pdfBlob = doc.output('blob');
+      const pdfFile = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: `${config.shopName} - Invoice ${invoice.invoiceNumber}`,
+          text: `Tax Invoice ${invoice.invoiceNumber} for ${invoice.customerName} (Total: ₹${invoice.grandTotal.toFixed(2)})`,
+          files: [pdfFile],
+        });
+        return;
+      }
+    } catch (err) {
+      console.log('Falling back to direct WhatsApp Web URL dispatch');
+    }
+
+    // Standard Direct WhatsApp Protocol (Pre-filled chat to customer's number)
     const itemsList = invoice.items
-      .map((i) => `• ${i.productName} (NW: ${i.netWeight}g) - ₹${i.totalPrice.toFixed(0)}`)
+      .map(
+        (i) =>
+          `• *${i.productName}*\n  Qty: ${i.quantity || 1} | NW: ${i.netWeight.toFixed(2)}g @ ₹${i.silverRateApplied}/g ➔ *₹${i.totalPrice.toFixed(0)}*`
+      )
       .join('\n');
 
     const billTitle =
@@ -47,18 +74,14 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
         ? 'ESTIMATE / QUOTATION'
         : invoice.invoiceType === 'NON_GST_BILL'
         ? 'RETAIL CASH MEMO'
-        : 'TAX INVOICE';
+        : 'GST TAX INVOICE';
 
-    const message = `✨ *${config.shopName}* ✨\n*${billTitle}: ${invoice.invoiceNumber}*\nDate: ${new Date(
-      invoice.date
-    ).toLocaleDateString('en-IN')}\nCustomer: ${invoice.customerName}\n\n*Items:*\n${itemsList}\n\n*Grand Total: ₹${invoice.grandTotal.toFixed(
-      2
-    )}* (${invoice.paymentMode})\n\n🔍 *Verify product purity & live stock anytime:* Scan the QR code on your bill!\n\nThank you! Visit again.`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://silver-shop-software.vercel.app';
+    const digitalBillUrl = `${origin}/invoice/${encodeURIComponent(invoice.invoiceNumber)}`;
 
-    const waUrl = `https://api.whatsapp.com/send?phone=91${invoice.customerPhone.replace(
-      /\D/g,
-      ''
-    )}&text=${encodeURIComponent(message)}`;
+    const message = `💎 *${config.shopName}* 💎\n${config.legalName ? `_Prop: ${config.legalName}_\n` : ''}${config.gstin ? `GSTIN: ${config.gstin}\n` : ''}━━━━━━━━━━━━━━━━━━━━\n📄 *${billTitle}*\n*Bill No:* ${invoice.invoiceNumber}\n*Date:* ${new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n*Customer:* ${invoice.customerName} (${invoice.customerPhone})\n━━━━━━━━━━━━━━━━━━━━\n🛍️ *ITEMS PURCHASED:*\n${itemsList}\n━━━━━━━━━━━━━━━━━━━━\n💵 *Subtotal:* ₹${invoice.subtotal.toFixed(2)}${invoice.discount > 0 ? `\n🏷️ *Discount:* -₹${invoice.discount.toFixed(2)}` : ''}${invoice.oldSilver && invoice.oldSilver.totalValue > 0 ? `\n♻️ *Old Silver Exch (${invoice.oldSilver.grossWeight}g):* -₹${invoice.oldSilver.totalValue.toFixed(2)}` : ''}${invoice.cgst > 0 ? `\n🏛️ *GST (3%):* ₹${(invoice.cgst + invoice.sgst).toFixed(2)}` : ''}\n\n💰 *GRAND TOTAL: ₹${invoice.grandTotal.toFixed(2)}*\n*Payment Mode:* ${invoice.paymentMode} (${invoice.paymentStatus})\n━━━━━━━━━━━━━━━━━━━━\n🔗 *View & Download Digital Invoice:* \n👉 ${digitalBillUrl}\n\n📍 *Store:* ${config.address}\n📞 *Contact:* ${config.phone}\n\n✨ _Thank you for shopping with us! Visit again._ ✨`;
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
 
@@ -73,6 +96,17 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
   };
 
   const badge = getHeaderBadge();
+
+  if (viewMode === 'THERMAL') {
+    return (
+      <ThermalReceiptView
+        invoice={invoice}
+        config={config}
+        initialWidth={config.printerWidth || '80mm'}
+        onBack={() => setViewMode('A4')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-900 py-6 px-4">
@@ -97,6 +131,16 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Switch to Thermal Slip */}
+          <button
+            onClick={() => setViewMode('THERMAL')}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition"
+            title="Switch to 80mm/58mm Thermal Roll Slip"
+          >
+            <Receipt className="w-4 h-4 text-amber-700" />
+            <span>Thermal Slip ({config.printerWidth || '80mm'})</span>
+          </button>
+
           <button
             onClick={handleWhatsAppShare}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
@@ -118,7 +162,7 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
             className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs shadow-xs transition"
           >
             <Printer className="w-4 h-4" />
-            <span>Print Bill</span>
+            <span>Print A4 Bill</span>
           </button>
         </div>
       </div>
@@ -131,7 +175,10 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               {config.shopName}
             </h1>
-            <p className="text-xs font-medium text-slate-600 mt-1">{config.tagline}</p>
+            {config.legalName && (
+              <p className="text-xs font-semibold text-slate-700">Proprietor: {config.legalName}</p>
+            )}
+            <p className="text-xs font-medium text-slate-600 mt-0.5">{config.tagline}</p>
             <p className="text-xs text-slate-600 mt-0.5">{config.address}</p>
             <p className="text-xs text-slate-600">
               Phone: <span className="font-semibold text-slate-800">{config.phone}</span>

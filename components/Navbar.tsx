@@ -127,9 +127,9 @@ export default function Navbar({
             </div>
             <div>
               <div className="font-black text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5">
-                <span>SHUBHAM</span>
+                <span>KUSHAL</span>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-amber-300 font-serif">
-                  SILVER
+                  JEWELLERYS
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">

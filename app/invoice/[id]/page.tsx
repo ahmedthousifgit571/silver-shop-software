@@ -15,9 +15,17 @@ interface PageProps {
 export default function InvoiceViewerPage({ params }: PageProps) {
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [config, setConfig] = useState(initialShopConfig);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.shopName) setConfig(data);
+      })
+      .catch(() => {});
+
     fetch(`/api/billing?inv=${encodeURIComponent(params.id)}`)
       .then((res) => res.json())
       .then((data) => {
@@ -70,7 +78,7 @@ export default function InvoiceViewerPage({ params }: PageProps) {
   return (
     <PDFInvoiceView
       invoice={invoice}
-      config={initialShopConfig}
+      config={config}
       onBack={() => router.push('/pos')}
     />
   );

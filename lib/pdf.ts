@@ -17,17 +17,18 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
 
   // 1. Header Section
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setTextColor(...primaryColor);
-  doc.text(config.shopName || 'SRI SHUBHAM SILVER JEWELS', 14, 20);
+  doc.text(config.shopName || 'KUSHAL JEWELLERYS', 14, 18);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(...textMuted);
-  doc.text(config.tagline || 'Pure Silver Ornaments & Fine Silverware', 14, 25);
-  doc.text(config.address || 'Car Street, Central Market', 14, 30);
-  doc.text(`Phone: ${config.phone} | Email: ${config.email || 'N/A'}`, 14, 35);
-  doc.text(`GSTIN: ${config.gstin || 'N/A'} | HSN: ${config.hsnCode || '7113'}`, 14, 40);
+  doc.text(`Proprietor: ${config.legalName || 'DASS GHNANABAVARI'}`, 14, 23);
+  doc.text(config.tagline || 'Pure Silver Ornaments, Pooja Articles & Fine Silverware', 14, 27);
+  doc.text(config.address || '#3-550, Ground Floor, Bazar Street, Revenue Ward No 3, Srikalahasti, Tirupati Dist., Andhra Pradesh - 517644', 14, 31);
+  doc.text(`Phone: ${config.phone || '+91 98765 43210'} | Email: ${config.email || 'sales@kushaljewellerys.com'}`, 14, 35);
+  doc.text(`GSTIN: ${config.gstin || '37AVEPG9436B1ZP'} | HSN: ${config.hsnCode || '7113'}`, 14, 39);
 
   // Invoice Title Right Aligned
   doc.setFont('helvetica', 'bold');

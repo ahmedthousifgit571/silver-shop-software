@@ -165,7 +165,7 @@ export default function AppHeader({
                     <Gem className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-bold text-sm text-slate-900 block leading-tight">Sri Shubham Silver</span>
+                    <span className="font-bold text-sm text-slate-900 block leading-tight">Kushal Jewellerys</span>
                     <span className="text-[10px] text-slate-500 font-medium">Store POS & Vault</span>
                   </div>
                 </div>

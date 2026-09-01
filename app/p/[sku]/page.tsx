@@ -42,6 +42,16 @@ async function getProductBySku(sku: string) {
   return fallback || null;
 }
 
+async function getShopConfig() {
+  try {
+    const config = await prisma.shopConfig.findUnique({
+      where: { id: 'default' },
+    });
+    if (config) return config;
+  } catch (err) {}
+  return initialShopConfig;
+}
+
 export async function generateMetadata({ params }: PageProps) {
   const product = await getProductBySku(params.sku);
   if (!product) return { title: 'Product Verification' };
@@ -52,7 +62,10 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function PublicProductVerificationPage({ params }: PageProps) {
-  const product = await getProductBySku(params.sku);
+  const [product, shopConfig] = await Promise.all([
+    getProductBySku(params.sku),
+    getShopConfig(),
+  ]);
 
   if (!product) {
     return (
@@ -92,8 +105,8 @@ export default async function PublicProductVerificationPage({ params }: PageProp
               <Gem className="w-5 h-5 text-slate-200" />
             </div>
             <div>
-              <h2 className="font-bold text-sm text-slate-900">{initialShopConfig.shopName}</h2>
-              <p className="text-[11px] text-slate-500 font-medium">{initialShopConfig.tagline}</p>
+              <h2 className="font-bold text-sm text-slate-900">{shopConfig.shopName}</h2>
+              <p className="text-[11px] text-slate-500 font-medium">{shopConfig.tagline}</p>
             </div>
           </div>
           <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full font-mono font-bold">
@@ -206,18 +219,18 @@ export default async function PublicProductVerificationPage({ params }: PageProp
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 text-center space-y-3 shadow-card">
           <div className="text-xs text-slate-600 flex items-center justify-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-slate-400" />
-            <span>{initialShopConfig.address}</span>
+            <span>{shopConfig.address}</span>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <a
-              href={`tel:${initialShopConfig.phone.replace(/\s+/g, '')}`}
+              href={`tel:${(shopConfig.phone || '').replace(/\s+/g, '')}`}
               className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition"
             >
               <Phone className="w-3.5 h-3.5 text-slate-600" />
               <span>Call Store</span>
             </a>
             <a
-              href={`https://api.whatsapp.com/send?phone=919876543210&text=Hi, inquiring about ${encodeURIComponent(product.name)} (${encodeURIComponent(product.sku)})`}
+              href={`https://api.whatsapp.com/send?phone=91${(shopConfig.phone || '9876543210').replace(/\D/g, '')}&text=Hi, inquiring about ${encodeURIComponent(product.name)} (${encodeURIComponent(product.sku)})`}
               target="_blank"
               rel="noopener noreferrer"
               className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs"

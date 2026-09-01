@@ -10,14 +10,19 @@ export const initialRates: SilverRates = {
 };
 
 export const initialShopConfig: ShopConfig = {
-  shopName: 'SRI SHUBHAM SILVER JEWELS',
+  shopName: 'KUSHAL JEWELLERYS',
+  legalName: 'DASS GHNANABAVARI',
   tagline: 'Pure Silver Ornaments, Pooja Articles & Fine Silverware',
-  gstin: '29AABCU9603R1ZM',
+  gstin: '37AVEPG9436B1ZP',
   hsnCode: '7113',
   phone: '+91 98765 43210',
-  email: 'sales@shubhamsilver.com',
-  address: '#42, Car Street, Central Market, City - 560001',
+  email: 'sales@kushaljewellerys.com',
+  address: '#3-550, Ground Floor, Bazar Street, Revenue Ward No 3, Srikalahasti, Tirupati Dist., Andhra Pradesh - 517644',
+  city: 'Srikalahasti',
+  state: 'Andhra Pradesh',
+  pincode: '517644',
   terms: '1. Goods once sold can be exchanged within 7 days against original invoice. 2. Purity guaranteed as per Hallmark specifications. 3. Silver rates calculated on date of billing.',
+  printerWidth: '80mm',
 };
 
 export const initialProducts: Product[] = [
