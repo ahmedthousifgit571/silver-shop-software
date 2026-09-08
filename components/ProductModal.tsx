@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, UploadCloud, Tag, CheckCircle2, DollarSign, Scale, Percent, Gem } from 'lucide-react';
-import { Product, MakingChargeType, PurityGrade, MetalType } from '@/lib/types';
+import { X, UploadCloud, Tag, CheckCircle2, DollarSign, Scale, Percent, Gem, Plus, Settings } from 'lucide-react';
+import { Product, MakingChargeType, PurityGrade, MetalType, Category } from '@/lib/types';
 import { generateProductQRCode } from '@/lib/qr';
+import CategoryManagementModal from './CategoryManagementModal';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface ProductModalProps {
   onSaveProduct: (productData: Partial<Product>) => void;
 }
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'Anklets',
   'Rings',
   'Chains',
@@ -32,6 +33,10 @@ export default function ProductModal({
   productToEdit,
   onSaveProduct,
 }: ProductModalProps) {
+  const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [categoriesData, setCategoriesData] = useState<Category[]>([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Anklets');
   const [metalType, setMetalType] = useState<MetalType>('SILVER');
@@ -51,6 +56,22 @@ export default function ProductModal({
   const [imageUrl, setImageUrl] = useState('');
   const [previewQr, setPreviewQr] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+
+  const loadCategories = () => {
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCategoriesData(data);
+          setCategoriesList(data.map((c: any) => c.name));
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   const netWeight = Math.max(0, grossWeight - stoneWeight);
 
@@ -75,7 +96,8 @@ export default function ProductModal({
       setImageUrl(productToEdit.imageUrl || '');
     } else {
       const randomSuffix = Math.floor(100 + Math.random() * 900);
-      const categoryCode = category.substring(0, 3).toUpperCase();
+      const matchedCat = categoriesData.find((c) => c.name === category);
+      const categoryCode = matchedCat?.code || category.substring(0, 3).toUpperCase();
       const newSku = `SLV-${categoryCode}-925-${randomSuffix}`;
       setSku(newSku);
       setName('');
@@ -102,10 +124,15 @@ export default function ProductModal({
   }, [sku]);
 
   const handleCategoryChange = (cat: string) => {
+    if (cat === '__NEW__') {
+      setIsCategoryModalOpen(true);
+      return;
+    }
     setCategory(cat);
     if (!productToEdit) {
       const randomSuffix = Math.floor(100 + Math.random() * 900);
-      const prefix = cat.substring(0, 3).toUpperCase();
+      const matchedCat = categoriesData.find((c) => c.name === cat);
+      const prefix = matchedCat?.code || cat.substring(0, 3).toUpperCase();
       setSku(`SLV-${prefix}-${purityGrade.startsWith('999') ? '999' : '925'}-${randomSuffix}`);
     }
   };
@@ -180,9 +207,20 @@ export default function ProductModal({
 
   if (!isOpen) return null;
 
+  const sanitizeNum = (val: string): number => {
+    const cleaned = val.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
+    return cleaned === '' ? 0 : parseFloat(cleaned) || 0;
+  };
+
+  const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-3 sm:p-4 animate-fade-in overflow-y-auto">
-      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-2xl p-4 sm:p-6 shadow-modal relative text-slate-900 my-4 sm:my-8 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-3 sm:p-4 animate-fade-in">
+      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-2xl p-5 sm:p-6 shadow-modal relative text-slate-900 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
@@ -190,80 +228,105 @@ export default function ProductModal({
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-3 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
-          <div className="p-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-200/60">
-            <Gem className="w-5 h-5" />
+        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-100">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-2xs">
+            <Tag className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900">
-              {productToEdit ? 'Edit Product Specifications' : 'Add New Jewellery Product'}
+            <h2 className="text-base font-bold text-slate-900">
+              {productToEdit ? 'Edit Jewellery Product' : 'Add New Jewellery Item'}
             </h2>
-            <p className="text-[11px] sm:text-xs text-slate-500">
-              Weights, purity, purchase cost basis, making charges, and stock.
+            <p className="text-xs text-slate-500">
+              Create product with instant SKU, weight breakdowns, and making charges.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Row 1: Name & Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Product Name *
+                Item / Product Name *
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Bridal Traditional Silver Payal"
+                placeholder="e.g. Bridal Payal 92.5"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Category *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">Category</label>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                  title="Add, edit or delete categories"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Manage / Add Category</span>
+                </button>
+              </div>
               <select
                 value={category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none"
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categoriesList.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
+                <option value="__NEW__" className="text-blue-600 font-bold bg-blue-50">
+                  + Add New Category...
+                </option>
               </select>
             </div>
           </div>
 
-          {/* Row 2: SKU & QR Code Preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 items-center bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-100">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Product SKU / Barcode *
-              </label>
-              <input
-                type="text"
-                required
-                value={sku}
-                onChange={(e) => setSku(e.target.value.toUpperCase())}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono font-bold focus:outline-none"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">
-                Encoded into printable jewelry stickers and invoices.
-              </p>
+          {/* Row 2: SKU & Metal Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">SKU / Code</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  required
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const randomSuffix = Math.floor(100 + Math.random() * 900);
+                    const categoryCode = category.substring(0, 3).toUpperCase();
+                    setSku(`SLV-${categoryCode}-925-${randomSuffix}`);
+                  }}
+                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold whitespace-nowrap transition"
+                >
+                  Generate
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-row sm:flex-col items-center justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-4">
-              {previewQr ? (
-                <img src={previewQr} alt="QR Preview" className="w-12 h-12 sm:w-14 sm:h-14 bg-white p-1 rounded-lg border border-slate-200" />
-              ) : (
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-lg border border-slate-200 flex items-center justify-center text-[9px] text-slate-400">
-                  QR
-                </div>
-              )}
-              <span className="text-[9px] text-slate-400 font-mono">Barcode QR</span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Metal Type</label>
+              <select
+                value={metalType}
+                onChange={(e) => setMetalType(e.target.value as MetalType)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none"
+              >
+                <option value="SILVER">Silver (Ag)</option>
+                <option value="GOLD">Gold (Au)</option>
+                <option value="PLATINUM">Platinum (Pt)</option>
+                <option value="BULLION">Bullion / Coin</option>
+              </select>
             </div>
           </div>
 
@@ -274,9 +337,12 @@ export default function ProductModal({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 required
-                value={grossWeight}
-                onChange={(e) => setGrossWeight(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                value={grossWeight === 0 ? '' : grossWeight}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setGrossWeight(sanitizeNum(e.target.value))}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none"
               />
             </div>
@@ -286,8 +352,11 @@ export default function ProductModal({
               <input
                 type="number"
                 step="0.01"
-                value={stoneWeight}
-                onChange={(e) => setStoneWeight(parseFloat(e.target.value) || 0)}
+                min="0"
+                placeholder="0.00"
+                value={stoneWeight === 0 ? '' : stoneWeight}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setStoneWeight(sanitizeNum(e.target.value))}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
               />
             </div>
@@ -309,9 +378,12 @@ export default function ProductModal({
               <input
                 type="number"
                 step="0.5"
+                min="0"
                 required
-                value={purchaseRatePerGram}
-                onChange={(e) => setPurchaseRatePerGram(parseFloat(e.target.value) || 0)}
+                placeholder="0.0"
+                value={purchaseRatePerGram === 0 ? '' : purchaseRatePerGram}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setPurchaseRatePerGram(sanitizeNum(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono font-semibold focus:outline-none"
               />
             </div>
@@ -321,8 +393,11 @@ export default function ProductModal({
               <input
                 type="number"
                 step="0.5"
-                value={wastagePercentage}
-                onChange={(e) => setWastagePercentage(parseFloat(e.target.value) || 0)}
+                min="0"
+                placeholder="0.0"
+                value={wastagePercentage === 0 ? '' : wastagePercentage}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setWastagePercentage(sanitizeNum(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono font-semibold focus:outline-none"
               />
             </div>
@@ -332,8 +407,11 @@ export default function ProductModal({
               <input
                 type="number"
                 step="0.5"
-                value={gstPercentage}
-                onChange={(e) => setGstPercentage(parseFloat(e.target.value) || 3.0)}
+                min="0"
+                placeholder="3.0"
+                value={gstPercentage === 0 ? '' : gstPercentage}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setGstPercentage(sanitizeNum(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono font-semibold focus:outline-none"
               />
             </div>
@@ -376,9 +454,12 @@ export default function ProductModal({
                 <input
                   type="number"
                   step="0.5"
+                  min="0"
                   required
-                  value={makingChargeValue}
-                  onChange={(e) => setMakingChargeValue(parseFloat(e.target.value) || 0)}
+                  placeholder="0.0"
+                  value={makingChargeValue === 0 ? '' : makingChargeValue}
+                  onKeyDown={handleNumericKeyDown}
+                  onChange={(e) => setMakingChargeValue(sanitizeNum(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold font-mono"
                 />
               </div>
@@ -394,8 +475,10 @@ export default function ProductModal({
                   type="number"
                   min="0"
                   required
-                  value={stockQuantity}
-                  onChange={(e) => setStockQuantity(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  value={stockQuantity === 0 ? '' : stockQuantity}
+                  onKeyDown={handleNumericKeyDown}
+                  onChange={(e) => setStockQuantity(sanitizeNum(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold font-mono"
                 />
               </div>
@@ -404,8 +487,10 @@ export default function ProductModal({
                 <input
                   type="number"
                   min="1"
-                  value={minStockAlert}
-                  onChange={(e) => setMinStockAlert(parseInt(e.target.value) || 1)}
+                  placeholder="1"
+                  value={minStockAlert === 0 ? '' : minStockAlert}
+                  onKeyDown={handleNumericKeyDown}
+                  onChange={(e) => setMinStockAlert(sanitizeNum(e.target.value) || 1)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono"
                 />
               </div>
@@ -447,6 +532,23 @@ export default function ProductModal({
           </div>
         </form>
       </div>
+
+      {/* Admin Category Management Modal */}
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          loadCategories();
+        }}
+        onCategoriesUpdated={(updated) => {
+          setCategoriesData(updated);
+          const names = updated.map((u) => u.name);
+          setCategoriesList(names);
+          if (names.length > 0 && !names.includes(category)) {
+            setCategory(names[0]);
+          }
+        }}
+      />
     </div>
   );
 }

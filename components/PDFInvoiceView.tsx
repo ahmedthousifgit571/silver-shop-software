@@ -30,6 +30,19 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
     generateAll();
   }, [invoice]);
 
+  const formatPayMode = (mode: string) => {
+    switch (mode) {
+      case 'CREDIT_CARD': return 'Credit Card';
+      case 'DEBIT_CARD': return 'Debit Card';
+      case 'UPI': return 'UPI';
+      case 'CASH': return 'Cash';
+      case 'KHATA': return 'Khata / Credit';
+      case 'ADVANCE_ADJUST': return 'Advance Adjustment';
+      case 'CARD': return 'Credit Card';
+      default: return mode;
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -79,7 +92,12 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://silver-shop-software.vercel.app';
     const digitalBillUrl = `${origin}/invoice/${encodeURIComponent(invoice.invoiceNumber)}`;
 
-    const message = `💎 *${config.shopName}* 💎\n${config.legalName ? `_Prop: ${config.legalName}_\n` : ''}${config.gstin ? `GSTIN: ${config.gstin}\n` : ''}━━━━━━━━━━━━━━━━━━━━\n📄 *${billTitle}*\n*Bill No:* ${invoice.invoiceNumber}\n*Date:* ${new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n*Customer:* ${invoice.customerName} (${invoice.customerPhone})\n━━━━━━━━━━━━━━━━━━━━\n🛍️ *ITEMS PURCHASED:*\n${itemsList}\n━━━━━━━━━━━━━━━━━━━━\n💵 *Subtotal:* ₹${invoice.subtotal.toFixed(2)}${invoice.discount > 0 ? `\n🏷️ *Discount:* -₹${invoice.discount.toFixed(2)}` : ''}${invoice.oldSilver && invoice.oldSilver.totalValue > 0 ? `\n♻️ *Old Silver Exch (${invoice.oldSilver.grossWeight}g):* -₹${invoice.oldSilver.totalValue.toFixed(2)}` : ''}${invoice.cgst > 0 ? `\n🏛️ *GST (3%):* ₹${(invoice.cgst + invoice.sgst).toFixed(2)}` : ''}\n\n💰 *GRAND TOTAL: ₹${invoice.grandTotal.toFixed(2)}*\n*Payment Mode:* ${invoice.paymentMode} (${invoice.paymentStatus})\n━━━━━━━━━━━━━━━━━━━━\n🔗 *View & Download Digital Invoice:* \n👉 ${digitalBillUrl}\n\n📍 *Store:* ${config.address}\n📞 *Contact:* ${config.phone}\n\n✨ _Thank you for shopping with us! Visit again._ ✨`;
+    const hasDue = (invoice.dueAmount || 0) > 0;
+    const dueDateStr = invoice.dueDate
+      ? new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '';
+
+    const message = `💎 *${config.shopName}* 💎\n${config.legalName ? `_Prop: ${config.legalName}_\n` : ''}${config.gstin ? `GSTIN: ${config.gstin}\n` : ''}━━━━━━━━━━━━━━━━━━━━\n📄 *${billTitle}*\n*Bill No:* ${invoice.invoiceNumber}\n*Date:* ${new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n*Customer:* ${invoice.customerName} (${invoice.customerPhone})\n━━━━━━━━━━━━━━━━━━━━\n🛍️ *ITEMS PURCHASED:*\n${itemsList}\n━━━━━━━━━━━━━━━━━━━━\n💵 *Subtotal:* ₹${invoice.subtotal.toFixed(2)}${invoice.discount > 0 ? `\n🏷️ *Discount:* -₹${invoice.discount.toFixed(2)}` : ''}${invoice.oldSilver && invoice.oldSilver.totalValue > 0 ? `\n♻️ *Old Silver Exch (${invoice.oldSilver.grossWeight}g):* -₹${invoice.oldSilver.totalValue.toFixed(2)}` : ''}${invoice.cgst > 0 ? `\n🏛️ *GST (3%):* ₹${(invoice.cgst + invoice.sgst).toFixed(2)}` : ''}${invoice.cardCharge && invoice.cardCharge > 0 ? `\n💳 *Credit Card Surcharge (2.25%):* +₹${invoice.cardCharge.toFixed(2)}` : ''}\n\n💰 *GRAND TOTAL: ₹${invoice.grandTotal.toFixed(2)}*\n*Payment Mode:* ${formatPayMode(invoice.paymentMode)} (${invoice.paymentStatus})${hasDue ? `\n💵 *Amount Paid:* ₹${invoice.paidAmount.toFixed(2)}\n⚠️ *Balance Due / Khata:* ₹${(invoice.dueAmount || 0).toFixed(2)}${dueDateStr ? `\n📅 *Promised Repayment Date:* ${dueDateStr}` : ''}` : ''}\n━━━━━━━━━━━━━━━━━━━━\n🔗 *View & Download Digital Invoice:* \n👉 ${digitalBillUrl}\n\n📍 *Store:* ${config.address}\n📞 *Contact:* ${config.phone}\n\n✨ _Thank you for shopping with us! Visit again._ ✨`;
 
     const waUrl = `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
@@ -199,7 +217,12 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
               Date: {new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
             <div className="text-xs font-medium text-slate-600 mt-0.5">
-              Payment: <span className="font-bold text-slate-800">{invoice.paymentMode}</span>
+              Payment: <span className="font-bold text-slate-800">{formatPayMode(invoice.paymentMode)}</span>
+              {invoice.paymentStatus !== 'PAID' && (
+                <span className="ml-1.5 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full">
+                  {invoice.paymentStatus}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -365,12 +388,45 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
               </>
             )}
 
+            {invoice.cardCharge && invoice.cardCharge > 0 && (
+              <div className="flex justify-between py-0.5 text-blue-700 font-semibold">
+                <span>Credit Card Surcharge (2.25%):</span>
+                <span className="font-mono">+ ₹{invoice.cardCharge.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="flex justify-between items-center bg-slate-900 text-white px-4 py-3 rounded-xl mt-3 shadow-sm">
               <span className="font-bold text-sm">Grand Total (INR):</span>
               <span className="font-bold text-lg font-mono text-emerald-400">
                 ₹{invoice.grandTotal.toFixed(2)}
               </span>
             </div>
+
+            {/* Payment Settlement & Due / Credit Info */}
+            {(invoice.dueAmount || 0) > 0 && (
+              <div className="mt-3 p-3.5 bg-rose-50/80 border border-rose-200/80 rounded-xl space-y-1.5 text-xs">
+                <div className="flex justify-between text-slate-700 font-medium">
+                  <span>Amount Paid Now:</span>
+                  <span className="font-mono font-bold text-emerald-700">₹{invoice.paidAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-rose-700 font-bold">
+                  <span>Balance Outstanding Due:</span>
+                  <span className="font-mono">₹{(invoice.dueAmount || 0).toFixed(2)}</span>
+                </div>
+                {invoice.dueDate && (
+                  <div className="flex justify-between text-amber-900 font-medium text-[11px] pt-1.5 border-t border-rose-200/60">
+                    <span>Promised Repayment Date:</span>
+                    <span className="font-bold">
+                      {new Date(invoice.dueDate).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import ProductModal from '@/components/ProductModal';
 import QRTagModal from '@/components/QRTagModal';
-import { Product, SilverRates } from '@/lib/types';
-import { initialProducts, initialRates } from '@/lib/storage';
+import CategoryManagementModal from '@/components/CategoryManagementModal';
+import { Product, SilverRates, Category } from '@/lib/types';
+import { initialProducts } from '@/lib/storage';
+import { useRates } from '@/context/RatesContext';
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'All',
   'Anklets',
   'Rings',
@@ -33,27 +35,39 @@ const CATEGORIES = [
 ];
 
 export default function ProductsPage() {
+  const { rates } = useRates();
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [rates, setRates] = useState<SilverRates>(initialRates);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryNames, setCategoryNames] = useState<string[]>(DEFAULT_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPurity, setSelectedPurity] = useState('All');
 
   // Modals
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [selectedProductForQR, setSelectedProductForQR] = useState<Product | null>(null);
 
-  useEffect(() => {
+  const loadData = () => {
     fetch('/api/products')
       .then((res) => res.json())
       .then((data) => Array.isArray(data) && data.length > 0 && setProducts(data))
       .catch(() => {});
 
-    fetch('/api/rates')
+    fetch('/api/categories')
       .then((res) => res.json())
-      .then((data) => data && data.fineRate999 && setRates(data))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCategories(data);
+          setCategoryNames(['All', ...data.map((c: any) => c.name)]);
+        }
+      })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const filteredProducts = products.filter((p) => {
@@ -112,11 +126,20 @@ export default function ProductsPage() {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-2xs transition active:scale-98"
+            title="Manage product categories"
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-600" />
+            <span>Manage Categories</span>
+          </button>
+
+          <button
             onClick={() => {
               setProductToEdit(null);
               setIsProductModalOpen(true);
             }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-blue-500/20 transition active:scale-98"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-blue-500/20 transition active:scale-98"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Product</span>
@@ -154,7 +177,7 @@ export default function ProductsPage() {
 
         {/* Category Pills (horizontal scroll) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-          {CATEGORIES.map((cat) => (
+          {categoryNames.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -425,6 +448,15 @@ export default function ProductsPage() {
         product={selectedProductForQR}
         isOpen={!!selectedProductForQR}
         onClose={() => setSelectedProductForQR(null)}
+      />
+
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          loadData();
+        }}
+        onCategoriesUpdated={() => loadData()}
       />
     </div>
   );

@@ -60,6 +60,30 @@ export default function CustomerModal({
     onClose();
   };
 
+  const handlePhoneChange = (val: string) => {
+    const digitsOnly = val.replace(/\D/g, '').slice(0, 10);
+    setPhone(digitsOnly);
+  };
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key === 'Backspace' ||
+      e.key === 'Delete' ||
+      e.key === 'Tab' ||
+      e.key === 'Escape' ||
+      e.key === 'Enter' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
       <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl p-6 shadow-modal relative text-slate-900">
@@ -106,10 +130,14 @@ export default function CustomerModal({
               </label>
               <input
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
                 required
                 placeholder="e.g. 9845012345"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onKeyDown={handlePhoneKeyDown}
+                onChange={(e) => handlePhoneChange(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-medium focus:outline-none"
               />
             </div>

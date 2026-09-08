@@ -8,27 +8,20 @@ import GlobalSearchModal from './GlobalSearchModal';
 import RateTickerModal from './RateTickerModal';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import ProductModal from './ProductModal';
+import CategoryManagementModal from './CategoryManagementModal';
 import { SilverRates, Product } from '@/lib/types';
 import { initialRates } from '@/lib/storage';
+import { useRates } from '@/context/RatesContext';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [rates, setRates] = useState<SilverRates>(initialRates);
+  const { rates, isRateModalOpen, openRateModal, closeRateModal, updateRates } = useRates();
 
   // Global Modals state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isRatesOpen, setIsRatesOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/rates')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.fineRate999) setRates(data);
-      })
-      .catch(() => {});
-  }, []);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Keyboard shortcut Ctrl+K
   useEffect(() => {
@@ -43,14 +36,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleUpdateRates = async (newRates: SilverRates) => {
-    setRates(newRates);
-    try {
-      await fetch('/api/rates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newRates),
-      });
-    } catch (e) {}
+    await updateRates(newRates);
   };
 
   const handleSaveProduct = async (productData: Partial<Product>) => {
@@ -77,8 +63,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Collapsible Left Sidebar */}
       <AppSidebar
         onOpenScanner={() => setIsScannerOpen(true)}
-        onOpenRates={() => setIsRatesOpen(true)}
-        onOpenAddProduct={() => setIsAddProductOpen(true)}
+        onOpenRates={openRateModal}
+        onOpenAddCategory={() => setIsCategoryModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -86,7 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Top Header */}
         <AppHeader
           rates={rates}
-          onOpenRates={() => setIsRatesOpen(true)}
+          onOpenRates={openRateModal}
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenAddProduct={() => setIsAddProductOpen(true)}
         />
@@ -104,8 +90,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <RateTickerModal
-        isOpen={isRatesOpen}
-        onClose={() => setIsRatesOpen(false)}
+        isOpen={isRateModalOpen}
+        onClose={closeRateModal}
         rates={rates}
         onSaveRates={handleUpdateRates}
       />
@@ -123,6 +109,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         onSaveProduct={handleSaveProduct}
+      />
+
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
       />
     </div>
   );

@@ -23,22 +23,27 @@ import {
   Sparkles,
   Scale,
   ShoppingBag,
+  CreditCard,
+  Calendar,
+  AlertCircle,
 } from 'lucide-react';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomerModal from '@/components/CustomerModal';
 import PDFInvoiceView from '@/components/PDFInvoiceView';
-import { Product, SilverRates, CartItem, Customer, Invoice, OldSilverExchange, ShopConfig, InvoiceType } from '@/lib/types';
-import { initialProducts, initialRates, initialCustomers, initialShopConfig } from '@/lib/storage';
+import { Product, SilverRates, CartItem, Customer, Invoice, OldSilverExchange, ShopConfig, InvoiceType, PaymentMode } from '@/lib/types';
+import { initialProducts, initialCustomers, initialShopConfig } from '@/lib/storage';
+import { useRates } from '@/context/RatesContext';
 
-const CATEGORIES = ['All', 'Anklets', 'Rings', 'Chains', 'Utensils', 'Idols', 'Coins'];
+const DEFAULT_CATEGORIES = ['All', 'Anklets', 'Rings', 'Chains', 'Utensils', 'Idols', 'Coins'];
 
 function POSBillingContent() {
   const searchParams = useSearchParams();
   const phoneParam = searchParams.get('phone') || '';
   const skuParam = searchParams.get('sku') || '';
 
+  const { rates } = useRates();
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [rates, setRates] = useState<SilverRates>(initialRates);
+  const [categoryNames, setCategoryNames] = useState<string[]>(DEFAULT_CATEGORIES);
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [shopConfig, setShopConfig] = useState<ShopConfig>(initialShopConfig);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -66,14 +71,22 @@ function POSBillingContent() {
   const [hasOldSilver, setHasOldSilver] = useState(false);
   const [oldSilver, setOldSilver] = useState<OldSilverExchange>({
     grossWeight: 0,
-    purityPercentage: 80,
-    meltRatePerGram: initialRates.scrapRateBuyback,
+    purityPercentage: 70.0,
+    meltRatePerGram: rates.scrapRateBuyback || 81.0,
     totalValue: 0,
   });
 
+  useEffect(() => {
+    if (rates.scrapRateBuyback) {
+      setOldSilver((prev) => ({ ...prev, meltRatePerGram: rates.scrapRateBuyback }));
+    }
+  }, [rates.scrapRateBuyback]);
+
   // Billing adjustments
   const [discountAmount, setDiscountAmount] = useState<number>(0);
-  const [paymentMode, setPaymentMode] = useState<'UPI' | 'CASH' | 'CARD' | 'SPLIT' | 'KHATA' | 'ADVANCE_ADJUST'>('UPI');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('UPI');
+  const [customPaidAmount, setCustomPaidAmount] = useState<number | null>(null);
+  const [dueDate, setDueDate] = useState<string>('');
   const [billNotes, setBillNotes] = useState('');
 
   // Post Checkout
@@ -97,12 +110,11 @@ function POSBillingContent() {
       })
       .catch(() => {});
 
-    fetch('/api/rates')
+    fetch('/api/categories')
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.fineRate999) {
-          setRates(data);
-          setOldSilver((prev) => ({ ...prev, meltRatePerGram: data.scrapRateBuyback }));
+        if (Array.isArray(data) && data.length > 0) {
+          setCategoryNames(['All', ...data.map((c: any) => c.name)]);
         }
       })
       .catch(() => {});
@@ -138,13 +150,15 @@ function POSBillingContent() {
   }, [phoneParam, skuParam]);
 
   const handlePhoneChange = (phoneInput: string) => {
-    setCustomerPhone(phoneInput);
-    if (phoneInput.length >= 2) {
+    // Only allow numeric digits (0-9) up to 10 digits
+    const digitsOnly = phoneInput.replace(/\D/g, '').slice(0, 10);
+    setCustomerPhone(digitsOnly);
+    if (digitsOnly.length >= 2) {
       const matches = customers.filter(
-        (c) => c.phone.includes(phoneInput) || c.name.toLowerCase().includes(phoneInput.toLowerCase())
+        (c) => c.phone.includes(digitsOnly) || c.name.toLowerCase().includes(digitsOnly.toLowerCase())
       );
       setMatchedCustomers(matches);
-      const exact = customers.find((c) => c.phone === phoneInput);
+      const exact = customers.find((c) => c.phone === digitsOnly);
       if (exact) {
         setCustomerName(exact.name);
         setCustomerAddress(exact.address || '');
@@ -155,6 +169,25 @@ function POSBillingContent() {
     } else {
       setMatchedCustomers([]);
       setSelectedCustomerObj(null);
+    }
+  };
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key === 'Backspace' ||
+      e.key === 'Delete' ||
+      e.key === 'Tab' ||
+      e.key === 'Escape' ||
+      e.key === 'Enter' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
     }
   };
 
@@ -249,6 +282,20 @@ function POSBillingContent() {
     setCart((prev) => prev.filter((item) => item.product.sku !== sku));
   };
 
+  const sanitizePositiveInput = (val: string): number => {
+    // Strip any minus sign, exponent or non-numeric chars except dot
+    const cleaned = val.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
+    if (!cleaned) return 0;
+    const num = parseFloat(cleaned);
+    return isNaN(num) || num < 0 ? 0 : num;
+  };
+
+  const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+    }
+  };
+
   const handleOldSilverChange = (field: keyof OldSilverExchange, value: number) => {
     const updated = { ...oldSilver, [field]: value };
     const netGrams = updated.grossWeight * (updated.purityPercentage / 100);
@@ -280,7 +327,27 @@ function POSBillingContent() {
   const totalPayable = taxableAmount + cgst + sgst + igst;
   const advanceAvailable = selectedCustomerObj?.advanceBalance || 0;
   const advanceDeduction = useAdvanceBalance ? Math.min(advanceAvailable, totalPayable) : 0;
-  const grandTotal = Math.max(0, totalPayable - advanceDeduction);
+  const basePayable = Math.max(0, totalPayable - advanceDeduction);
+
+  // Credit Card Surcharge (2.25%)
+  const isCreditCard = paymentMode === 'CREDIT_CARD' || paymentMode === 'CARD';
+  const cardCharge = isCreditCard ? basePayable * 0.0225 : 0;
+  const grandTotal = basePayable + cardCharge;
+
+  // Partial Payment & Due Calculation
+  const paidAmount =
+    customPaidAmount !== null
+      ? Math.max(0, Math.min(customPaidAmount, grandTotal))
+      : grandTotal;
+  const dueAmount = Math.max(0, grandTotal - paidAmount);
+  const paymentStatus: 'PAID' | 'PARTIAL' | 'DUE' =
+    dueAmount <= 0 ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'DUE';
+
+  const setPresetDueDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    setDueDate(d.toISOString().split('T')[0]);
+  };
 
   const costOfGoodsSold = cart.reduce((acc, item) => {
     const costPerGram = item.product.purchaseRatePerGram || 72.0;
@@ -311,8 +378,13 @@ function POSBillingContent() {
       cgst,
       sgst,
       igst,
+      cardCharge,
       grandTotal,
       paymentMode: useAdvanceBalance && grandTotal === 0 ? 'ADVANCE_ADJUST' : paymentMode,
+      paymentStatus,
+      paidAmount,
+      dueAmount,
+      dueDate: dueAmount > 0 && dueDate ? dueDate : undefined,
       costOfGoodsSold,
       profit,
       notes: billNotes.trim() || undefined,
@@ -376,6 +448,8 @@ function POSBillingContent() {
           setHasOldSilver(false);
           setDiscountAmount(0);
           setUseAdvanceBalance(false);
+          setCustomPaidAmount(null);
+          setDueDate('');
         }}
       />
     );
@@ -447,7 +521,7 @@ function POSBillingContent() {
             </div>
 
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs no-scrollbar">
-              {CATEGORIES.map((cat) => (
+              {categoryNames.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
@@ -592,10 +666,14 @@ function POSBillingContent() {
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="tel"
-                placeholder="Mobile (e.g. 98450)"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                placeholder="Mobile (e.g. 9845012345)"
                 value={customerPhone}
+                onKeyDown={handlePhoneKeyDown}
                 onChange={(e) => handlePhoneChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none font-medium"
+                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none font-medium font-mono"
               />
               <input
                 type="text"
@@ -720,9 +798,12 @@ function POSBillingContent() {
                     <input
                       type="number"
                       step="0.1"
-                      value={oldSilver.grossWeight}
+                      min="0"
+                      placeholder="0.0"
+                      value={oldSilver.grossWeight === 0 ? '' : oldSilver.grossWeight}
+                      onKeyDown={handleNumericKeyDown}
                       onChange={(e) =>
-                        handleOldSilverChange('grossWeight', parseFloat(e.target.value) || 0)
+                        handleOldSilverChange('grossWeight', sanitizePositiveInput(e.target.value))
                       }
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-900 font-mono"
                     />
@@ -732,9 +813,13 @@ function POSBillingContent() {
                     <input
                       type="number"
                       step="1"
-                      value={oldSilver.purityPercentage}
+                      min="0"
+                      max="100"
+                      placeholder="80"
+                      value={oldSilver.purityPercentage === 0 ? '' : oldSilver.purityPercentage}
+                      onKeyDown={handleNumericKeyDown}
                       onChange={(e) =>
-                        handleOldSilverChange('purityPercentage', parseFloat(e.target.value) || 0)
+                        handleOldSilverChange('purityPercentage', sanitizePositiveInput(e.target.value))
                       }
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-900 font-mono"
                     />
@@ -744,9 +829,12 @@ function POSBillingContent() {
                     <input
                       type="number"
                       step="0.5"
-                      value={oldSilver.meltRatePerGram}
+                      min="0"
+                      placeholder="0.0"
+                      value={oldSilver.meltRatePerGram === 0 ? '' : oldSilver.meltRatePerGram}
+                      onKeyDown={handleNumericKeyDown}
                       onChange={(e) =>
-                        handleOldSilverChange('meltRatePerGram', parseFloat(e.target.value) || 0)
+                        handleOldSilverChange('meltRatePerGram', sanitizePositiveInput(e.target.value))
                       }
                       className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs text-slate-900 font-mono"
                     />
@@ -766,8 +854,11 @@ function POSBillingContent() {
               <label className="text-[10px] text-slate-500 block mb-0.5">Discount (₹)</label>
               <input
                 type="number"
-                value={discountAmount}
-                onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                min="0"
+                placeholder="0"
+                value={discountAmount === 0 ? '' : discountAmount}
+                onKeyDown={handleNumericKeyDown}
+                onChange={(e) => setDiscountAmount(sanitizePositiveInput(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-mono font-medium"
               />
             </div>
@@ -781,10 +872,130 @@ function POSBillingContent() {
               >
                 <option value="UPI">UPI (GPay / QR)</option>
                 <option value="CASH">Cash in Drawer</option>
-                <option value="CARD">Debit / Credit Card</option>
-                <option value="KHATA">Khata / Credit</option>
+                <option value="CREDIT_CARD">Credit Card (+2.25% charge)</option>
+                <option value="DEBIT_CARD">Debit Card (0% fee)</option>
+                <option value="KHATA">Khata / Store Credit</option>
               </select>
             </div>
+          </div>
+
+          {/* Credit Card Surcharge Notification */}
+          {cardCharge > 0 && (
+            <div className="flex justify-between items-center text-blue-700 bg-blue-50/90 px-3 py-2 rounded-xl border border-blue-200/70 text-xs font-semibold animate-fade-in">
+              <span className="flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                <span>Credit Card Surcharge (2.25%):</span>
+              </span>
+              <span className="font-mono font-bold">+ ₹{cardCharge.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Payment Settlement & Credit/Due Management */}
+          <div className="bg-slate-50/90 border border-slate-200/90 p-3 rounded-xl space-y-2.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                <Wallet className="w-3.5 h-3.5 text-slate-500" />
+                Payment Settlement
+              </span>
+              {dueAmount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setCustomPaidAmount(null)}
+                  className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 underline"
+                >
+                  Set Full Pay (₹{grandTotal.toFixed(0)})
+                </button>
+              ) : (
+                <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Full Payment
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-0.5">Amount Paid (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={
+                    customPaidAmount !== null
+                      ? customPaidAmount === 0
+                        ? ''
+                        : customPaidAmount
+                      : grandTotal > 0
+                      ? Number(grandTotal.toFixed(2))
+                      : ''
+                  }
+                  onKeyDown={handleNumericKeyDown}
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      setCustomPaidAmount(0);
+                    } else {
+                      setCustomPaidAmount(sanitizePositiveInput(e.target.value));
+                    }
+                  }}
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-0.5">Balance Due / Credit</label>
+                <div
+                  className={`px-2.5 py-1.5 rounded-lg font-mono font-bold text-xs border ${
+                    dueAmount > 0
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}
+                >
+                  ₹{dueAmount.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Promised Repayment Date when there is outstanding balance */}
+            {dueAmount > 0 && (
+              <div className="pt-2 border-t border-slate-200/80 space-y-1.5 animate-fade-in">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-semibold text-amber-900 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    Promised Repayment Date:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setPresetDueDate(7)}
+                      className="px-2 py-0.5 bg-amber-100/80 hover:bg-amber-200 text-amber-900 rounded font-semibold text-[9px] transition"
+                    >
+                      +7d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresetDueDate(15)}
+                      className="px-2 py-0.5 bg-amber-100/80 hover:bg-amber-200 text-amber-900 rounded font-semibold text-[9px] transition"
+                    >
+                      +15d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresetDueDate(30)}
+                      className="px-2 py-0.5 bg-amber-100/80 hover:bg-amber-200 text-amber-900 rounded font-semibold text-[9px] transition"
+                    >
+                      +30d
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-200"
+                />
+              </div>
+            )}
           </div>
 
           {/* Final Calculations & Checkout Trigger */}
@@ -812,6 +1023,13 @@ function POSBillingContent() {
               <div className="flex justify-between text-slate-500">
                 <span>GST (3%):</span>
                 <span className="font-mono">₹{(cgst + sgst + igst).toFixed(2)}</span>
+              </div>
+            )}
+
+            {cardCharge > 0 && (
+              <div className="flex justify-between text-blue-700 font-semibold font-mono">
+                <span>Credit Card Charge (2.25%):</span>
+                <span>+ ₹{cardCharge.toFixed(2)}</span>
               </div>
             )}
 

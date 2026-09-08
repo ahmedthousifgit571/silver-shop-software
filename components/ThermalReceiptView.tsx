@@ -31,30 +31,33 @@ export default function ThermalReceiptView({
     }
   }, [invoice]);
 
+  const formatPayMode = (mode: string) => {
+    switch (mode) {
+      case 'CREDIT_CARD': return 'CREDIT CARD';
+      case 'DEBIT_CARD': return 'DEBIT CARD';
+      case 'UPI': return 'UPI';
+      case 'CASH': return 'CASH';
+      case 'KHATA': return 'KHATA / CREDIT';
+      case 'ADVANCE_ADJUST': return 'ADVANCE ADJUST';
+      case 'CARD': return 'CREDIT CARD';
+      default: return mode;
+    }
+  };
+
   const handlePrint = () => {
     const is58 = selectedWidth === '58mm';
-    const paperWidth = is58 ? '54mm' : '76mm';
-    const printableWidth = is58 ? '52mm' : '72mm';
-    const fontSize = is58 ? '9px' : '11px';
     const headerSize = is58 ? '11px' : '13px';
-    const qrSize = is58 ? '50px' : '65px';
+    const qrSize = is58 ? '70px' : '90px';
 
     const itemsHtml = invoice.items
       .map(
         (item) => `
-        <div style="margin-bottom: 4px; padding-bottom: 3px; border-bottom: 1px dotted #ccc;">
-          <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${item.productName}
+        <div style="margin-bottom: 3px;">
+          <div style="font-weight: bold; font-size: ${is58 ? '8.5px' : '9.5px'};">${item.productName}</div>
+          <div class="flex-between" style="font-size: ${is58 ? '7.5px' : '8.5px'}; color: #333;">
+            <span>${item.netWeight}g @ ₹${item.silverRateApplied}/g (Purity: ${item.purity}%)</span>
+            <span class="font-bold text-right">₹${item.totalPrice.toFixed(0)}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: ${is58 ? '8.5px' : '10px'}; color: #333;">
-            <span>${item.netWeight.toFixed(2)}g @ ₹${item.silverRateApplied}/g</span>
-            <span style="font-weight: bold; color: #000;">₹${item.totalPrice.toFixed(0)}</span>
-          </div>
-          ${
-            item.makingCharge && item.makingCharge > 0
-              ? `<div style="font-size: 7.5px; color: #666;">Making: ₹${item.makingCharge.toFixed(0)} | Purity: ${item.purity}%</div>`
-              : ''
-          }
         </div>
       `
       )
@@ -77,26 +80,19 @@ export default function ThermalReceiptView({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Receipt #${invoice.invoiceNumber}</title>
+          <title>Receipt ${invoice.invoiceNumber}</title>
           <style>
             @page {
-              size: ${paperWidth} auto;
-              margin: 0mm;
-            }
-            * {
-              box-sizing: border-box;
               margin: 0;
-              padding: 0;
+              size: ${selectedWidth} auto;
             }
             body {
-              width: ${printableWidth};
-              margin: 0 auto;
-              padding: 4px 2px;
               font-family: 'Courier New', Courier, monospace;
-              font-size: ${fontSize};
-              line-height: 1.2;
+              font-size: ${is58 ? '9px' : '10.5px'};
               color: #000000;
-              background: #ffffff;
+              margin: 0;
+              padding: ${is58 ? '2px 4px' : '4px 8px'};
+              line-height: 1.15;
             }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
@@ -129,7 +125,7 @@ export default function ThermalReceiptView({
             </div>
             <div>Cust: <span class="font-bold">${invoice.customerName}</span></div>
             <div>Mob: ${invoice.customerPhone}</div>
-            <div>Pay Mode: <span class="font-bold">${invoice.paymentMode}</span></div>
+            <div>Pay Mode: <span class="font-bold">${formatPayMode(invoice.paymentMode)}${invoice.paymentStatus !== 'PAID' ? ` (${invoice.paymentStatus})` : ''}</span></div>
           </div>
 
           <!-- Items Table Header -->
@@ -173,11 +169,39 @@ export default function ThermalReceiptView({
                   </div>`
                 : ''
             }
+            ${
+              invoice.cardCharge && invoice.cardCharge > 0
+                ? `<div class="flex-between">
+                    <span>CC Fee (2.25%):</span>
+                    <span>+₹${invoice.cardCharge.toFixed(2)}</span>
+                  </div>`
+                : ''
+            }
             <div class="flex-between font-bold border-double" style="font-size: ${headerSize}; padding-top: 3px; margin-top: 2px;">
               <span>NET TOTAL:</span>
               <span>₹${invoice.grandTotal.toFixed(2)}</span>
             </div>
-          </div>
+            ${
+              (invoice.dueAmount || 0) > 0
+                ? `<div class="flex-between" style="font-weight: bold; margin-top: 2px;">
+                    <span>PAID:</span>
+                    <span>₹${invoice.paidAmount.toFixed(2)}</span>
+                  </div>
+                  <div class="flex-between font-bold">
+                    <span>DUE BAL:</span>
+                    <span>₹${(invoice.dueAmount || 0).toFixed(2)}</span>
+                  </div>
+                  ${
+                    invoice.dueDate
+                      ? `<div class="flex-between" style="font-size: 7.5px; color: #444;">
+                          <span>PROMISED DATE:</span>
+                          <span>${new Date(invoice.dueDate).toLocaleDateString('en-IN')}</span>
+                        </div>`
+                      : ''
+                  }`
+                : ''
+            }
+          </div>          </div>
 
           <!-- QR Code & Footer -->
           <div class="text-center border-t py-2">
@@ -293,7 +317,12 @@ export default function ThermalReceiptView({
           </div>
           <div>Mob: {invoice.customerPhone}</div>
           <div>
-            Pay Mode: <span className="font-bold uppercase">{invoice.paymentMode}</span>
+            Pay Mode: <span className="font-bold uppercase">{formatPayMode(invoice.paymentMode)}</span>
+            {invoice.paymentStatus !== 'PAID' && (
+              <span className="ml-1 text-[8px] bg-black text-white px-1 py-0.2 rounded font-bold">
+                {invoice.paymentStatus}
+              </span>
+            )}
           </div>
         </div>
 
@@ -340,10 +369,34 @@ export default function ThermalReceiptView({
               <span>₹{(invoice.cgst + invoice.sgst).toFixed(2)}</span>
             </div>
           )}
+          {invoice.cardCharge && invoice.cardCharge > 0 && (
+            <div className="flex justify-between text-blue-900 font-semibold">
+              <span>CC Fee (2.25%):</span>
+              <span>+₹{invoice.cardCharge.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-extrabold text-xs sm:text-sm pt-1.5 border-t-2 border-black">
             <span>NET TOTAL:</span>
             <span>₹{invoice.grandTotal.toFixed(2)}</span>
           </div>
+          {(invoice.dueAmount || 0) > 0 && (
+            <div className="pt-1.5 border-t border-dotted border-gray-400 space-y-0.5 text-[9.5px]">
+              <div className="flex justify-between font-bold">
+                <span>PAID NOW:</span>
+                <span>₹{invoice.paidAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-extrabold text-red-700">
+                <span>BALANCE DUE:</span>
+                <span>₹{(invoice.dueAmount || 0).toFixed(2)}</span>
+              </div>
+              {invoice.dueDate && (
+                <div className="flex justify-between text-[8px] text-gray-600">
+                  <span>PROMISED DATE:</span>
+                  <span>{new Date(invoice.dueDate).toLocaleDateString('en-IN')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* QR Code & Footer */}

@@ -40,6 +40,18 @@ model Product {
   @@index([metalType])
 }
 
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g. Anklets, Rings, Chains, Utensils
+  code        String?  // Short SKU prefix e.g. ANK, RNG, CHN, UTN
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
 model Customer {
   id                 String              @id @default(cuid())
   name               String
@@ -121,11 +133,14 @@ model Invoice {
   cgst            Float         @default(0) // 1.5%
   sgst            Float         @default(0) // 1.5%
   igst            Float         @default(0) // 3% for inter-state
+  cardCharge      Float         @default(0) // 2.25% credit card surcharge
   grandTotal      Float
   
-  paymentMode     String        // CASH, UPI, CARD, SPLIT, KHATA, ADVANCE_ADJUST
+  paymentMode     String        // CASH, UPI, CARD, CREDIT_CARD, DEBIT_CARD, SPLIT, KHATA, ADVANCE_ADJUST
   paymentStatus   String        @default("PAID") // PAID, PARTIAL, DUE
   paidAmount      Float         @default(0)
+  dueAmount       Float         @default(0) // Remaining balance due
+  dueDate         DateTime?     // Promised repayment date
   costOfGoodsSold Float         @default(0) // Product cost for profit reporting
   profit          Float         @default(0) // Net profit
   notes           String?
@@ -169,6 +184,7 @@ model SilverRate {
   utensilRate800   Float         @default(77.0) // ₹ per gram
   goldRate916      Float         @default(7150.0) // ₹ per gram (22K Gold)
   scrapRateBuyback Float         @default(81.0) // ₹ per gram
+  displayShowcase  String        @default("925") // '925', '999', '800', '916', 'ALL'
   lastUpdated      DateTime      @default(now())
 }
 

@@ -17,19 +17,21 @@ import {
   ChevronLeft,
   ChevronRight,
   PlusCircle,
+  Clock,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface AppSidebarProps {
   onOpenScanner?: () => void;
   onOpenRates?: () => void;
-  onOpenAddProduct?: () => void;
+  onOpenAddCategory?: () => void;
 }
 
 export default function AppSidebar({
   onOpenScanner,
   onOpenRates,
-  onOpenAddProduct,
+  onOpenAddCategory,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -45,6 +47,7 @@ export default function AppSidebar({
     { label: 'Products', href: '/products', icon: Gem, iconColor: 'text-amber-600' },
     { label: 'Inventory', href: '/inventory', icon: Boxes, iconColor: 'text-teal-600' },
     { label: 'Customers', href: '/customers', icon: Users, iconColor: 'text-purple-600' },
+    { label: 'Credit & Dues', href: '/customers?tab=dues', icon: Clock, iconColor: 'text-rose-600' },
     { label: 'Reports', href: '/reports', icon: BarChart3, iconColor: 'text-sky-600' },
   ];
 
@@ -158,18 +161,18 @@ export default function AppSidebar({
             </button>
           )}
 
-          {onOpenAddProduct && (
+          {onOpenAddCategory && (
             <button
-              onClick={onOpenAddProduct}
+              onClick={onOpenAddCategory}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left group ${
                 isCollapsed ? 'justify-center' : ''
               }`}
-              title="Quick Add Product"
+              title="Add & Manage Categories"
             >
-              <div className="p-1 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 transition">
-                <PlusCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-1 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition">
+                <Layers className="w-4 h-4 flex-shrink-0" />
               </div>
-              {!isCollapsed && <span>Add Product</span>}
+              {!isCollapsed && <span>Add Category</span>}
             </button>
           )}
         </div>

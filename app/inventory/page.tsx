@@ -20,13 +20,15 @@ import QRTagModal from '@/components/QRTagModal';
 import StockAdjustmentModal from '@/components/StockAdjustmentModal';
 import PurchaseStockInModal from '@/components/PurchaseStockInModal';
 import { Product, SilverRates, PurchaseStockIn } from '@/lib/types';
-import { initialProducts, initialRates, initialPurchases } from '@/lib/storage';
+import { initialProducts, initialPurchases } from '@/lib/storage';
+import { useRates } from '@/context/RatesContext';
 
-const CATEGORIES = ['All', 'Anklets', 'Rings', 'Chains', 'Utensils', 'Idols', 'Coins'];
+const DEFAULT_CATEGORIES = ['All', 'Anklets', 'Rings', 'Chains', 'Utensils', 'Idols', 'Coins'];
 
 export default function InventoryPage() {
+  const { rates } = useRates();
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [rates, setRates] = useState<SilverRates>(initialRates);
+  const [categoryNames, setCategoryNames] = useState<string[]>(DEFAULT_CATEGORIES);
   const [purchases, setPurchases] = useState<PurchaseStockIn[]>(initialPurchases);
   const [activeTab, setActiveTab] = useState<'STOCK' | 'INWARD_LOGS'>('STOCK');
 
@@ -47,9 +49,13 @@ export default function InventoryPage() {
       .then((data) => Array.isArray(data) && data.length > 0 && setProducts(data))
       .catch(() => {});
 
-    fetch('/api/rates')
+    fetch('/api/categories')
       .then((res) => res.json())
-      .then((data) => data && data.fineRate999 && setRates(data))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCategoryNames(['All', ...data.map((c: any) => c.name)]);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -255,7 +261,7 @@ export default function InventoryPage() {
 
             {/* Category horizontal scrolling pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-              {CATEGORIES.map((cat) => (
+              {categoryNames.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}

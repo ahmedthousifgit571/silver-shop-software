@@ -11,13 +11,16 @@ import {
   Loader2,
   MapPin,
   Building2,
+  Layers,
 } from 'lucide-react';
 import { ShopConfig } from '@/lib/types';
 import { initialShopConfig } from '@/lib/storage';
+import CategoryManagementModal from '@/components/CategoryManagementModal';
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<ShopConfig>(initialShopConfig);
   const [printerWidth, setPrinterWidth] = useState<'80mm' | '58mm'>('80mm');
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -470,6 +473,35 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Product Categories Administration Card */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200/60">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Product Categories & SKU Management</h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Add, rename, or delete jewellery categories (e.g., Payals, Idols, Rings) and adjust SKU prefixes.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCategoryModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition active:scale-98 self-start sm:self-auto"
+            >
+              <Layers className="w-3.5 h-3.5 text-blue-300" />
+              <span>Manage Categories</span>
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Categories defined here automatically appear in the Product Creation modal, barcode generator, and catalog filters without requiring code changes.
+          </p>
+        </div>
+
         {/* Save Button */}
         <div className="flex items-center justify-end">
           <button
@@ -493,6 +525,12 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* Admin Category Management Modal */}
+      <CategoryManagementModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+      />
     </div>
   );
 }

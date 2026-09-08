@@ -6,6 +6,7 @@ export const initialRates: SilverRates = {
   utensilRate800: 77.0,
   goldRate916: 7150.0,
   scrapRateBuyback: 81.0,
+  displayShowcase: '925',
   lastUpdated: new Date().toISOString(),
 };
 

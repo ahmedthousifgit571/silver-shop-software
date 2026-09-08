@@ -114,8 +114,15 @@ export default function StockAdjustmentModal({
               type="number"
               min="0"
               required
-              value={adjustQty}
-              onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
+              placeholder="0"
+              value={adjustQty === 0 ? '' : adjustQty}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+              }}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+                setAdjustQty(cleaned === '' ? 0 : parseInt(cleaned) || 0);
+              }}
               className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none"
             />
           </div>

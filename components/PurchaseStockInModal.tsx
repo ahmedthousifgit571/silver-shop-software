@@ -132,12 +132,17 @@ export default function PurchaseStockInModal({
                 type="number"
                 min="1"
                 required
-                value={quantity}
+                placeholder="1"
+                value={quantity === 0 ? '' : quantity}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                }}
                 onChange={(e) => {
-                  const q = parseInt(e.target.value) || 1;
+                  const cleaned = e.target.value.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+                  const q = cleaned === '' ? 0 : parseInt(cleaned) || 1;
                   setQuantity(q);
                   const prod = products.find((p) => p.sku === selectedSku);
-                  if (prod) setWeightGrams(prod.netWeight * q);
+                  if (prod && q > 0) setWeightGrams(prod.netWeight * q);
                 }}
                 className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-900 font-bold"
               />
@@ -148,9 +153,17 @@ export default function PurchaseStockInModal({
               <input
                 type="number"
                 step="0.1"
+                min="0"
                 required
-                value={weightGrams}
-                onChange={(e) => setWeightGrams(parseFloat(e.target.value) || 0)}
+                placeholder="0.0"
+                value={weightGrams === 0 ? '' : weightGrams}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                }}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
+                  setWeightGrams(cleaned === '' ? 0 : parseFloat(cleaned) || 0);
+                }}
                 className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-900 font-bold"
               />
             </div>
@@ -160,8 +173,17 @@ export default function PurchaseStockInModal({
               <input
                 type="number"
                 step="0.1"
-                value={purity}
-                onChange={(e) => setPurity(parseFloat(e.target.value) || 0)}
+                min="0"
+                max="100"
+                placeholder="92.5"
+                value={purity === 0 ? '' : purity}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                }}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
+                  setPurity(cleaned === '' ? 0 : parseFloat(cleaned) || 0);
+                }}
                 className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-900 font-bold"
               />
             </div>
@@ -175,9 +197,17 @@ export default function PurchaseStockInModal({
               <input
                 type="number"
                 step="0.5"
+                min="0"
                 required
-                value={purchaseRatePerGram}
-                onChange={(e) => setPurchaseRatePerGram(parseFloat(e.target.value) || 0)}
+                placeholder="0.0"
+                value={purchaseRatePerGram === 0 ? '' : purchaseRatePerGram}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                }}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
+                  setPurchaseRatePerGram(cleaned === '' ? 0 : parseFloat(cleaned) || 0);
+                }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-mono font-bold focus:outline-none"
               />
             </div>

@@ -36,12 +36,25 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   doc.setTextColor(...accentColor);
   doc.text('TAX INVOICE', 196, 20, { align: 'right' });
 
+  const formatPayMode = (mode: string) => {
+    switch (mode) {
+      case 'CREDIT_CARD': return 'Credit Card';
+      case 'DEBIT_CARD': return 'Debit Card';
+      case 'UPI': return 'UPI';
+      case 'CASH': return 'Cash';
+      case 'KHATA': return 'Khata / Credit';
+      case 'ADVANCE_ADJUST': return 'Advance Adjustment';
+      case 'CARD': return 'Credit Card';
+      default: return mode;
+    }
+  };
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
   doc.text(`Invoice No: ${invoice.invoiceNumber}`, 196, 26, { align: 'right' });
   doc.text(`Date: ${new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 196, 31, { align: 'right' });
-  doc.text(`Payment: ${invoice.paymentMode} (${invoice.paymentStatus})`, 196, 36, { align: 'right' });
+  doc.text(`Payment: ${formatPayMode(invoice.paymentMode)} (${invoice.paymentStatus})`, 196, 36, { align: 'right' });
 
   // Divider Line
   doc.setDrawColor(226, 232, 240);
@@ -178,6 +191,14 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   doc.text('SGST (1.5%):', rightX, currentY);
   doc.text(`Rs. ${invoice.sgst.toFixed(2)}`, valX, currentY, { align: 'right' });
 
+  if (invoice.cardCharge && invoice.cardCharge > 0) {
+    currentY += 5;
+    doc.setTextColor(37, 99, 235); // Blue
+    doc.text('Credit Card Fee (2.25%):', rightX, currentY);
+    doc.text(`+ Rs. ${invoice.cardCharge.toFixed(2)}`, valX, currentY, { align: 'right' });
+    doc.setTextColor(51, 65, 85);
+  }
+
   // Grand Total Box
   currentY += 7;
   doc.setFillColor(241, 245, 249);
@@ -188,6 +209,39 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   doc.setTextColor(...primaryColor);
   doc.text('Grand Total:', rightX, currentY + 2);
   doc.text(`Rs. ${invoice.grandTotal.toFixed(2)}`, valX, currentY + 2, { align: 'right' });
+
+  if ((invoice.dueAmount || 0) > 0) {
+    currentY += 9;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text('Amount Paid:', rightX, currentY);
+    doc.text(`Rs. ${invoice.paidAmount.toFixed(2)}`, valX, currentY, { align: 'right' });
+
+    currentY += 4.5;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 38, 38);
+    doc.text('Balance Due / Credit:', rightX, currentY);
+    doc.text(`Rs. ${(invoice.dueAmount || 0).toFixed(2)}`, valX, currentY, { align: 'right' });
+
+    if (invoice.dueDate) {
+      currentY += 4.5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(180, 83, 9);
+      doc.text('Promised Due Date:', rightX, currentY);
+      doc.text(
+        new Date(invoice.dueDate).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        valX,
+        currentY,
+        { align: 'right' }
+      );
+    }
+  }
 
   // 5. Terms and Signature at Bottom
   const bottomY = 270;

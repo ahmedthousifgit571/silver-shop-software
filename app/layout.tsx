@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { RatesProvider } from '@/context/RatesContext';
 import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
@@ -25,7 +26,9 @@ export default function RootLayout({
       </head>
       <body className="bg-[#F8F9FA] text-slate-900 font-sans antialiased selection:bg-slate-900 selection:text-white">
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <RatesProvider>
+            <AppShell>{children}</AppShell>
+          </RatesProvider>
         </AuthProvider>
       </body>
     </html>

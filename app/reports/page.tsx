@@ -90,6 +90,19 @@ export default function ReportsPage() {
   });
 
   const exportToCSV = () => {
+    const formatPayMode = (mode: string) => {
+      switch (mode) {
+        case 'CREDIT_CARD': return 'Credit Card';
+        case 'DEBIT_CARD': return 'Debit Card';
+        case 'UPI': return 'UPI';
+        case 'CASH': return 'Cash';
+        case 'KHATA': return 'Khata / Credit';
+        case 'ADVANCE_ADJUST': return 'Advance Adjustment';
+        case 'CARD': return 'Credit Card';
+        default: return mode;
+      }
+    };
+
     const headers = [
       'Invoice Number',
       'Invoice Type',
@@ -100,8 +113,13 @@ export default function ReportsPage() {
       'CGST (INR)',
       'SGST (INR)',
       'IGST (INR)',
+      'Card Surcharge (INR)',
       'Grand Total (INR)',
       'Payment Mode',
+      'Payment Status',
+      'Paid Amount (INR)',
+      'Due Balance (INR)',
+      'Promised Repayment Date',
     ];
 
     const rows = filteredInvoices.map((inv) => [
@@ -114,8 +132,13 @@ export default function ReportsPage() {
       inv.cgst.toFixed(2),
       inv.sgst.toFixed(2),
       (inv.igst || 0).toFixed(2),
+      (inv.cardCharge || 0).toFixed(2),
       inv.grandTotal.toFixed(2),
-      inv.paymentMode,
+      formatPayMode(inv.paymentMode),
+      inv.paymentStatus || 'PAID',
+      (inv.paidAmount !== undefined ? inv.paidAmount : inv.grandTotal).toFixed(2),
+      (inv.dueAmount || 0).toFixed(2),
+      inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : 'N/A',
     ]);
 
     const csvContent =
@@ -411,9 +434,24 @@ export default function ReportsPage() {
                       ₹{inv.grandTotal.toFixed(2)}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
-                        {inv.paymentMode}
-                      </span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                          {inv.paymentMode === 'CREDIT_CARD'
+                            ? 'Credit Card'
+                            : inv.paymentMode === 'DEBIT_CARD'
+                            ? 'Debit Card'
+                            : inv.paymentMode}
+                        </span>
+                        {inv.paymentStatus === 'PARTIAL' ? (
+                          <span className="text-[9px] text-amber-800 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            Due ₹{(inv.dueAmount || 0).toFixed(0)}
+                          </span>
+                        ) : inv.paymentStatus === 'DUE' ? (
+                          <span className="text-[9px] text-rose-800 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                            Unpaid Credit
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-3 px-3 text-right">
                       <Link

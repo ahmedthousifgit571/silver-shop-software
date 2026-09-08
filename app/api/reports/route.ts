@@ -49,13 +49,13 @@ function computeAnalytics(invoices: any[], products: any[]) {
     }, 0),
     cashCollected: todayInvoices
       .filter((inv) => inv.paymentMode === 'CASH')
-      .reduce((acc, inv) => acc + inv.grandTotal, 0),
+      .reduce((acc, inv) => acc + (inv.paidAmount !== undefined ? inv.paidAmount : inv.grandTotal), 0),
     upiCollected: todayInvoices
       .filter((inv) => inv.paymentMode === 'UPI')
-      .reduce((acc, inv) => acc + inv.grandTotal, 0),
+      .reduce((acc, inv) => acc + (inv.paidAmount !== undefined ? inv.paidAmount : inv.grandTotal), 0),
     cardCollected: todayInvoices
-      .filter((inv) => inv.paymentMode === 'CARD')
-      .reduce((acc, inv) => acc + inv.grandTotal, 0),
+      .filter((inv) => inv.paymentMode === 'CARD' || inv.paymentMode === 'CREDIT_CARD' || inv.paymentMode === 'DEBIT_CARD')
+      .reduce((acc, inv) => acc + (inv.paidAmount !== undefined ? inv.paidAmount : inv.grandTotal), 0),
     oldSilverWeightReceived: todayInvoices.reduce(
       (acc, inv) => acc + (inv.oldSilverWeight || 0),
       0

@@ -130,17 +130,43 @@ export default function AppHeader({
           {/* Metal Rate Compact Pill with Warm Amber & Emerald Glow */}
           <button
             onClick={onOpenRates}
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200/80 rounded-xl text-[11px] sm:text-xs text-slate-800 transition group shadow-2xs"
-            title="Click to edit Silver Rates"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-amber-50/90 hover:bg-amber-100/90 border border-amber-200/90 rounded-xl text-[11px] sm:text-xs text-slate-800 transition group shadow-2xs hover:shadow-xs active:scale-98"
+            title="Click to change store metal rates & showcase"
           >
             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-            <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-              <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-semibold">925:</span>
-              <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
-              <span className="text-amber-300 hidden xs:inline">|</span>
-              <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-semibold hidden xs:inline">999:</span>
-              <span className="font-bold text-slate-900 font-mono hidden xs:inline">₹{rates.fineRate999}</span>
-            </div>
+            
+            {rates.displayShowcase === '999' ? (
+              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">999 Fine:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.fineRate999}</span>
+              </div>
+            ) : rates.displayShowcase === '800' ? (
+              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">800 Utensil:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.utensilRate800}</span>
+              </div>
+            ) : rates.displayShowcase === '916' ? (
+              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">22K Gold:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.goldRate916 || 7150}</span>
+              </div>
+            ) : rates.displayShowcase === 'ALL' ? (
+              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">925:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
+                <span className="text-amber-300">|</span>
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">999:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.fineRate999}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">925:</span>
+                <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
+                <span className="text-amber-300 hidden xs:inline">|</span>
+                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold hidden xs:inline">999:</span>
+                <span className="font-bold text-slate-900 font-mono hidden xs:inline">₹{rates.fineRate999}</span>
+              </div>
+            )}
           </button>
 
           {/* Quick Action: New Bill Button in Apple Blue */}
