@@ -53,33 +53,42 @@ export async function POST(request: Request) {
 
     // 2. Perform DB Transaction: Create customer/update, create invoice, deduct stock
     try {
-      // Find or upsert customer
-      let customer = await prisma.customer.upsert({
+      // Find or create customer with unique phone constraint
+      const existingCustomer = await prisma.customer.findUnique({
         where: { phone: body.customerPhone },
-        update: {
-          name: body.customerName,
-          address: body.customerAddress || undefined,
-          totalSpend: { increment: grandTotal },
-          totalBills: { increment: 1 },
-          ...(dueAmount > 0 ? { outstandingBalance: { increment: dueAmount } } : {}),
-        },
-        create: {
-          name: body.customerName,
-          phone: body.customerPhone,
-          address: body.customerAddress || null,
-          totalSpend: grandTotal,
-          totalBills: 1,
-          outstandingBalance: dueAmount,
-        },
       });
+
+      let customer;
+      if (existingCustomer) {
+        customer = await prisma.customer.update({
+          where: { id: existingCustomer.id },
+          data: {
+            address: body.customerAddress || existingCustomer.address,
+            totalSpend: { increment: grandTotal },
+            totalBills: { increment: 1 },
+            ...(dueAmount > 0 ? { outstandingBalance: { increment: dueAmount } } : {}),
+          },
+        });
+      } else {
+        customer = await prisma.customer.create({
+          data: {
+            name: body.customerName,
+            phone: body.customerPhone,
+            address: body.customerAddress || null,
+            totalSpend: grandTotal,
+            totalBills: 1,
+            outstandingBalance: dueAmount,
+          },
+        });
+      }
 
       // Create Invoice & InvoiceItems
       const createdInvoice = await prisma.invoice.create({
         data: {
           invoiceNumber,
           customerId: customer.id,
-          customerName: body.customerName,
-          customerPhone: body.customerPhone,
+          customerName: customer.name || body.customerName,
+          customerPhone: customer.phone,
           subtotal: Number(body.subtotal),
           makingCharges: Number(body.makingCharges || 0),
           discount: Number(body.discount || 0),

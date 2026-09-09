@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
@@ -26,6 +26,9 @@ import {
   CreditCard,
   Calendar,
   AlertCircle,
+  UserCheck,
+  Lock,
+  X,
 } from 'lucide-react';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomerModal from '@/components/CustomerModal';
@@ -63,6 +66,22 @@ function POSBillingContent() {
   const [customerAddress, setCustomerAddress] = useState('');
   const [selectedCustomerObj, setSelectedCustomerObj] = useState<Customer | null>(null);
   const [matchedCustomers, setMatchedCustomers] = useState<Customer[]>([]);
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close customer suggestions dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Advance Adjustment
   const [useAdvanceBalance, setUseAdvanceBalance] = useState(false);
@@ -153,22 +172,43 @@ function POSBillingContent() {
     // Only allow numeric digits (0-9) up to 10 digits
     const digitsOnly = phoneInput.replace(/\D/g, '').slice(0, 10);
     setCustomerPhone(digitsOnly);
+
     if (digitsOnly.length >= 2) {
       const matches = customers.filter(
         (c) => c.phone.includes(digitsOnly) || c.name.toLowerCase().includes(digitsOnly.toLowerCase())
       );
       setMatchedCustomers(matches);
+      setIsCustomerDropdownOpen(matches.length > 0);
+
       const exact = customers.find((c) => c.phone === digitsOnly);
       if (exact) {
         setCustomerName(exact.name);
         setCustomerAddress(exact.address || '');
         setSelectedCustomerObj(exact);
+        setIsCustomerDropdownOpen(false);
       } else {
         setSelectedCustomerObj(null);
       }
     } else {
       setMatchedCustomers([]);
+      setIsCustomerDropdownOpen(false);
       setSelectedCustomerObj(null);
+    }
+  };
+
+  const handleNameChange = (nameInput: string) => {
+    if (selectedCustomerObj) return; // Locked to existing customer
+    setCustomerName(nameInput);
+
+    if (nameInput.trim().length >= 2 && customerPhone.length < 10) {
+      const matches = customers.filter((c) =>
+        c.name.toLowerCase().includes(nameInput.toLowerCase()) || c.phone.includes(nameInput)
+      );
+      setMatchedCustomers(matches);
+      setIsCustomerDropdownOpen(matches.length > 0);
+    } else if (customerPhone.length < 2) {
+      setMatchedCustomers([]);
+      setIsCustomerDropdownOpen(false);
     }
   };
 
@@ -197,6 +237,17 @@ function POSBillingContent() {
     setCustomerAddress(c.address || '');
     setSelectedCustomerObj(c);
     setMatchedCustomers([]);
+    setIsCustomerDropdownOpen(false);
+  };
+
+  const clearSelectedCustomer = () => {
+    setCustomerPhone('');
+    setCustomerName('');
+    setCustomerAddress('');
+    setSelectedCustomerObj(null);
+    setMatchedCustomers([]);
+    setIsCustomerDropdownOpen(false);
+    setUseAdvanceBalance(false);
   };
 
   const getProductRate = (purity: number): number => {
@@ -647,57 +698,165 @@ function POSBillingContent() {
             </div>
           </div>
 
-          {/* Customer Select Form */}
-          <div className="space-y-2 relative">
+          {/* Customer Select Form with Autocomplete Suggestions */}
+          <div className="space-y-2 relative" ref={customerDropdownRef}>
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <Phone className="w-3 h-3 text-blue-500" />
-                <span>Customer Mobile *</span>
+              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-blue-600" />
+                <span>Customer Contact *</span>
               </span>
-              <button
-                type="button"
-                onClick={() => setIsCustomerModalOpen(true)}
-                className="text-blue-600 hover:text-blue-700 font-semibold text-xs"
-              >
-                + New Customer
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="tel"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={10}
-                placeholder="Mobile (e.g. 9845012345)"
-                value={customerPhone}
-                onKeyDown={handlePhoneKeyDown}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none font-medium font-mono"
-              />
-              <input
-                type="text"
-                placeholder="Customer Name *"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none font-medium"
-              />
-            </div>
-
-            {/* Customer Dropdown */}
-            {matchedCustomers.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-20 bg-white border border-slate-200 rounded-xl shadow-lg mt-1 overflow-hidden">
-                {matchedCustomers.map((c) => (
+              <div className="flex items-center gap-2">
+                {(customerPhone || customerName || selectedCustomerObj) && (
                   <button
-                    key={c.id}
                     type="button"
-                    onClick={() => selectCustomer(c)}
-                    className="w-full px-3 py-2 text-left hover:bg-blue-50 text-xs flex justify-between items-center border-b border-slate-100 last:border-0"
+                    onClick={clearSelectedCustomer}
+                    className="text-[11px] text-slate-400 hover:text-slate-700 hover:underline flex items-center gap-0.5"
+                    title="Clear customer details"
                   >
-                    <span className="font-semibold text-slate-900">{c.name}</span>
-                    <span className="text-blue-600 font-mono font-medium">+91 {c.phone}</span>
+                    <X className="w-3 h-3" />
+                    <span>Clear</span>
                   </button>
-                ))}
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  className="text-blue-600 hover:text-blue-700 font-semibold text-xs flex items-center gap-1"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ New Customer</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Mobile Input */}
+              <div className="relative">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  placeholder="Mobile (e.g. 9845012345)"
+                  value={customerPhone}
+                  onFocus={() => {
+                    if (matchedCustomers.length > 0) setIsCustomerDropdownOpen(true);
+                  }}
+                  onKeyDown={handlePhoneKeyDown}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  className={`w-full bg-slate-50 border ${
+                    selectedCustomerObj
+                      ? 'border-emerald-300 bg-emerald-50/40 text-emerald-900'
+                      : 'border-slate-200 focus:border-blue-500 text-slate-900'
+                  } focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs focus:outline-none font-semibold font-mono transition`}
+                />
+                {selectedCustomerObj && (
+                  <span className="absolute right-2.5 top-2 text-emerald-600" title="Existing registered customer">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </span>
+                )}
+              </div>
+
+              {/* Customer Name Input (Locked when matched to existing customer) */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Customer Name *"
+                  value={customerName}
+                  readOnly={!!selectedCustomerObj}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  onFocus={() => {
+                    if (!selectedCustomerObj && matchedCustomers.length > 0) setIsCustomerDropdownOpen(true);
+                  }}
+                  className={`w-full ${
+                    selectedCustomerObj
+                      ? 'bg-slate-100/90 text-slate-800 cursor-not-allowed border-slate-200 font-bold'
+                      : 'bg-slate-50 text-slate-900 border-slate-200 focus:border-blue-500 font-medium'
+                  } border focus:ring-2 focus:ring-blue-100 rounded-xl px-3 py-1.5 text-xs focus:outline-none transition`}
+                />
+                {selectedCustomerObj && (
+                  <span
+                    className="absolute right-2.5 top-2 text-slate-400"
+                    title="Name is locked to this registered mobile number to prevent duplicate profiles"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Status Alert Banner */}
+            {selectedCustomerObj ? (
+              <div className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200/80 rounded-xl text-[11px] text-emerald-900 animate-fade-in">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  <span className="truncate">
+                    <strong>{selectedCustomerObj.name}</strong> • {selectedCustomerObj.totalBills || 0} bills (₹{(selectedCustomerObj.totalSpend || 0).toLocaleString('en-IN')})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSelectedCustomer}
+                  className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline ml-2 flex-shrink-0"
+                >
+                  Change
+                </button>
+              </div>
+            ) : customerPhone.length === 10 ? (
+              <div className="flex items-center gap-1.5 p-2 bg-blue-50 border border-blue-200/80 rounded-xl text-[11px] text-blue-900 animate-fade-in">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                <span>
+                  <strong>New Customer Entry</strong>: Enter name above to create profile.
+                </span>
+              </div>
+            ) : null}
+
+            {/* Smart Suggestions Dropdown */}
+            {isCustomerDropdownOpen && matchedCustomers.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl mt-1.5 overflow-hidden max-h-56 overflow-y-auto">
+                <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                  <span>Matching Registered Customers</span>
+                  <span className="font-mono text-blue-600">{matchedCustomers.length} Found</span>
+                </div>
+                {matchedCustomers.map((c) => {
+                  const initials = c.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => selectCustomer(c)}
+                      className="w-full px-3 py-2 text-left hover:bg-blue-50/80 border-b border-slate-100 last:border-0 flex items-center justify-between gap-2 transition group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
+                          {initials || 'C'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 group-hover:text-blue-700 truncate">
+                            {c.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            +91 {c.phone} {c.address ? `• ${c.address}` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-[10px] font-mono font-bold text-slate-700 block">
+                          ₹{(c.totalSpend || 0).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[9px] text-slate-400">
+                          {c.totalBills || 0} bills
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
 

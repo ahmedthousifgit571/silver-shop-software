@@ -19,6 +19,7 @@ import ProductModal from '@/components/ProductModal';
 import QRTagModal from '@/components/QRTagModal';
 import StockAdjustmentModal from '@/components/StockAdjustmentModal';
 import PurchaseStockInModal from '@/components/PurchaseStockInModal';
+import DeleteProductModal from '@/components/DeleteProductModal';
 import { Product, SilverRates, PurchaseStockIn } from '@/lib/types';
 import { initialProducts, initialPurchases } from '@/lib/storage';
 import { useRates } from '@/context/RatesContext';
@@ -40,6 +41,7 @@ export default function InventoryPage() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [selectedProductForQR, setSelectedProductForQR] = useState<Product | null>(null);
   const [selectedProductForStock, setSelectedProductForStock] = useState<Product | null>(null);
 
@@ -126,6 +128,22 @@ export default function InventoryPage() {
         body: JSON.stringify(prodData),
       });
     } catch (e) {}
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    try {
+      const res = await fetch(`/api/products/${encodeURIComponent(product.sku)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete product');
+      }
+      setProducts((prev) => prev.filter((p) => p.id !== product.id && p.sku !== product.sku));
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      throw err;
+    }
   };
 
   return (
@@ -494,6 +512,11 @@ export default function InventoryPage() {
         }}
         productToEdit={productToEdit}
         onSaveProduct={handleSaveProduct}
+        onDeleteProduct={(prod) => {
+          setIsProductModalOpen(false);
+          setProductToEdit(null);
+          setProductToDelete(prod);
+        }}
       />
 
       <PurchaseStockInModal
@@ -514,6 +537,13 @@ export default function InventoryPage() {
         isOpen={!!selectedProductForStock}
         onClose={() => setSelectedProductForStock(null)}
         onUpdateStock={handleUpdateStock}
+      />
+
+      <DeleteProductModal
+        isOpen={!!productToDelete}
+        product={productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirmDelete={handleDeleteProduct}
       />
     </div>
   );

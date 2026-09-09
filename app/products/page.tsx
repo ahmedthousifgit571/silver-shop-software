@@ -15,10 +15,12 @@ import {
   AlertTriangle,
   Layers,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import ProductModal from '@/components/ProductModal';
 import QRTagModal from '@/components/QRTagModal';
 import CategoryManagementModal from '@/components/CategoryManagementModal';
+import DeleteProductModal from '@/components/DeleteProductModal';
 import { Product, SilverRates, Category } from '@/lib/types';
 import { initialProducts } from '@/lib/storage';
 import { useRates } from '@/context/RatesContext';
@@ -47,6 +49,7 @@ export default function ProductsPage() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [selectedProductForQR, setSelectedProductForQR] = useState<Product | null>(null);
 
   const loadData = () => {
@@ -106,6 +109,22 @@ export default function ProductsPage() {
         body: JSON.stringify(prodData),
       });
     } catch (e) {}
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    try {
+      const res = await fetch(`/api/products/${encodeURIComponent(product.sku)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete product');
+      }
+      setProducts((prev) => prev.filter((p) => p.id !== product.id && p.sku !== product.sku));
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      throw err;
+    }
   };
 
   return (
@@ -269,20 +288,28 @@ export default function ProductsPage() {
               <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   onClick={() => setSelectedProductForQR(prod)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold"
                 >
                   <QrCode className="w-3.5 h-3.5" />
-                  <span>Sticker QR</span>
+                  <span>QR</span>
                 </button>
                 <button
                   onClick={() => {
                     setProductToEdit(prod);
                     setIsProductModalOpen(true);
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => setProductToDelete(prod)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold"
+                  title="Delete product"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
                 </button>
               </div>
             </div>
@@ -422,6 +449,14 @@ export default function ProductsPage() {
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
+
+                          <button
+                            onClick={() => setProductToDelete(prod)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Permanently Delete Product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -442,6 +477,11 @@ export default function ProductsPage() {
         }}
         productToEdit={productToEdit}
         onSaveProduct={handleSaveProduct}
+        onDeleteProduct={(prod) => {
+          setIsProductModalOpen(false);
+          setProductToEdit(null);
+          setProductToDelete(prod);
+        }}
       />
 
       <QRTagModal
@@ -457,6 +497,13 @@ export default function ProductsPage() {
           loadData();
         }}
         onCategoriesUpdated={() => loadData()}
+      />
+
+      <DeleteProductModal
+        isOpen={!!productToDelete}
+        product={productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirmDelete={handleDeleteProduct}
       />
     </div>
   );

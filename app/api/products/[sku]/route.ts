@@ -67,3 +67,49 @@ export async function PUT(
     return NextResponse.json({ success: true, updated: body });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { sku: string } }
+) {
+  const { sku } = params;
+  const decodedSku = decodeURIComponent(sku).trim();
+
+  try {
+    const product = await prisma.product.findUnique({
+      where: { sku: decodedSku },
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Unlink any invoice items referencing this product to maintain sales integrity
+    try {
+      await prisma.invoiceItem.updateMany({
+        where: { productId: product.id },
+        data: { productId: null },
+      });
+    } catch (unlinkErr) {
+      console.warn('Could not unlink invoice items:', unlinkErr);
+    }
+
+    // Hard delete the product record from the database
+    await prisma.product.delete({
+      where: { id: product.id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Product ${decodedSku} permanently deleted`,
+      deletedId: product.id,
+      deletedSku: product.sku,
+    });
+  } catch (error: any) {
+    console.error('Error deleting product from DB:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete product' },
+      { status: 500 }
+    );
+  }
+}
