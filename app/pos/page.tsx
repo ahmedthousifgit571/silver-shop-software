@@ -16,6 +16,8 @@ import {
   RotateCcw,
   CheckCircle2,
   UserPlus,
+  Gem,
+  PackagePlus,
   FileText,
   Percent,
   Wallet,
@@ -32,6 +34,7 @@ import {
 } from 'lucide-react';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import CustomerModal from '@/components/CustomerModal';
+import ProductModal from '@/components/ProductModal';
 import PDFInvoiceView from '@/components/PDFInvoiceView';
 import { Product, SilverRates, CartItem, Customer, Invoice, OldSilverExchange, ShopConfig, InvoiceType, PaymentMode } from '@/lib/types';
 import { initialProducts, initialCustomers, initialShopConfig } from '@/lib/storage';
@@ -114,6 +117,8 @@ function POSBillingContent() {
   // Modals
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productInitialName, setProductInitialName] = useState("");
 
   useEffect(() => {
     fetch('/api/products')
@@ -274,37 +279,40 @@ function POSBillingContent() {
   };
 
   const addToCart = (product: Product) => {
-    const existingIndex = cart.findIndex((item) => item.product.sku === product.sku);
     const applicableRate = getProductRate(product.purity);
 
-    if (existingIndex > -1) {
-      const updated = [...cart];
-      const newQty = updated[existingIndex].quantity + 1;
-      const { wastage, making, total } = getWastageAndMaking(product, newQty);
+    setCart((prevCart) => {
+      const existingIndex = prevCart.findIndex((item) => item.product.sku === product.sku);
 
-      updated[existingIndex] = {
-        ...updated[existingIndex],
-        quantity: newQty,
-        wastageAmount: wastage,
-        makingCharge: making,
-        totalPrice: total,
-      };
-      setCart(updated);
-    } else {
-      const { wastage, making, total } = getWastageAndMaking(product, 1);
-      setCart([
-        ...cart,
-        {
-          product,
-          quantity: 1,
-          silverRateApplied: applicableRate,
+      if (existingIndex > -1) {
+        const updated = [...prevCart];
+        const newQty = updated[existingIndex].quantity + 1;
+        const { wastage, making, total } = getWastageAndMaking(product, newQty);
+
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: newQty,
           wastageAmount: wastage,
           makingCharge: making,
-          stoneCharge: 0,
           totalPrice: total,
-        },
-      ]);
-    }
+        };
+        return updated;
+      } else {
+        const { wastage, making, total } = getWastageAndMaking(product, 1);
+        return [
+          ...prevCart,
+          {
+            product,
+            quantity: 1,
+            silverRateApplied: applicableRate,
+            wastageAmount: wastage,
+            makingCharge: making,
+            stoneCharge: 0,
+            totalPrice: total,
+          },
+        ];
+      }
+    });
   };
 
   const updateQuantity = (sku: string, delta: number) => {
@@ -332,6 +340,79 @@ function POSBillingContent() {
   const removeFromCart = (sku: string) => {
     setCart((prev) => prev.filter((item) => item.product.sku !== sku));
   };
+
+  const handleSaveNewProduct = async (prodData: Partial<Product>) => {
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const categoryCode = prodData.category ? prodData.category.substring(0, 3).toUpperCase() : 'ANK';
+    const generatedSku = prodData.sku || `SLV-${categoryCode}-925-${randomSuffix}`;
+
+    const grossWeight = Number(prodData.grossWeight || 10);
+    const stoneWeight = Number(prodData.stoneWeight || 0);
+    const netWeight = Number(prodData.netWeight || Math.max(0, grossWeight - stoneWeight));
+
+    const newProduct: Product = {
+      id: prodData.id || `prod-${Date.now()}`,
+      sku: generatedSku,
+      name: prodData.name || 'New Jewellery Item',
+      category: prodData.category || 'Anklets',
+      metalType: prodData.metalType || 'SILVER',
+      description: prodData.description || '',
+      grossWeight,
+      stoneWeight,
+      netWeight,
+      purity: Number(prodData.purity || 92.5),
+      purityGrade: prodData.purityGrade || '925 Sterling',
+      purchaseRatePerGram: Number(prodData.purchaseRatePerGram || 72),
+      wastagePercentage: Number(prodData.wastagePercentage || 0),
+      makingChargeType: prodData.makingChargeType || 'PER_GRAM',
+      makingChargeValue: Number(prodData.makingChargeValue || 50),
+      gstPercentage: Number(prodData.gstPercentage || 3),
+      stockQuantity: Number(prodData.stockQuantity || 5),
+      minStockAlert: Number(prodData.minStockAlert || 1),
+      imageUrl: prodData.imageUrl || '',
+      qrCodeUrl: prodData.qrCodeUrl || '',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    // 1. Add to local catalog immediately
+    setProducts((prev) => [newProduct, ...prev.filter((p) => p.sku !== newProduct.sku)]);
+
+    // 2. Automatically add to active bill / cart!
+    addToCart(newProduct);
+
+    // 3. Reset search query and close modal
+    setSearchQuery('');
+    setIsProductModalOpen(false);
+    setProductInitialName('');
+
+    // 4. Persist to database via API
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct),
+      });
+      if (res.ok) {
+        const savedDBProduct = await res.json();
+        if (savedDBProduct && savedDBProduct.id) {
+          setProducts((prev) =>
+            prev.map((p) => (p.sku === newProduct.sku ? { ...p, ...savedDBProduct } : p))
+          );
+          setCart((prev) =>
+            prev.map((item) =>
+              item.product.sku === newProduct.sku
+                ? { ...item, product: { ...item.product, ...savedDBProduct } }
+                : item
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Failed to persist new product:', err);
+    }
+  };
+
 
   const sanitizePositiveInput = (val: string): number => {
     // Strip any minus sign, exponent or non-numeric chars except dot
@@ -562,6 +643,19 @@ function POSBillingContent() {
               </div>
 
               <button
+                type="button"
+                onClick={() => {
+                  setProductInitialName(searchQuery.trim());
+                  setIsProductModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition flex-shrink-0 shadow-xs active:scale-98"
+                title="Add New Product to Inventory & Bill"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Product</span>
+              </button>
+
+              <button
                 onClick={() => setIsScannerOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-semibold transition flex-shrink-0 shadow-2xs"
                 title="Camera QR Scanner"
@@ -588,9 +682,35 @@ function POSBillingContent() {
             </div>
           </div>
 
-          {/* Product Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
-            {filteredProducts.map((product) => {
+          {/* Product Cards Grid / Empty State */}
+          {filteredProducts.length === 0 ? (
+            <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-4 shadow-card">
+              <div className="w-14 h-14 bg-amber-50 border border-amber-200/70 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                <Gem className="w-7 h-7" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h3 className="text-sm font-bold text-slate-800">
+                  {searchQuery ? `"${searchQuery}" not found in catalogue` : 'No products found'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  This product is not registered in your inventory yet. You can add it directly to your catalogue and active bill right now.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setProductInitialName(searchQuery.trim());
+                  setIsProductModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-98"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Create {searchQuery ? `"${searchQuery}"` : 'New Product'} &amp; Add to Bill</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
+              {filteredProducts.map((product) => {
               const { total } = getWastageAndMaking(product, 1);
               const isOutOfStock = product.stockQuantity <= 0;
 
@@ -632,6 +752,7 @@ function POSBillingContent() {
               );
             })}
           </div>
+        )}
         </div>
 
         {/* RIGHT COLUMN: Active Cart / Bill Summary (5 cols) */}
@@ -881,9 +1002,22 @@ function POSBillingContent() {
           {/* Cart Items List */}
           <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
             {cart.length === 0 ? (
-              <div className="text-center py-6 text-slate-400 text-xs">
+              <div className="text-center py-6 text-slate-400 text-xs space-y-2">
                 <ShoppingCart className="w-6 h-6 mx-auto mb-1 text-slate-300" />
                 <span>Cart is empty. Click products or scan barcode to add.</span>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductInitialName('');
+                      setIsProductModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Add New Product to Bill</span>
+                  </button>
+                </div>
               </div>
             ) : (
               cart.map((item) => (
@@ -1275,6 +1409,17 @@ function POSBillingContent() {
           setCustomers([created, ...customers]);
           selectCustomer(created);
         }}
+      />
+
+      {/* Product Modal */}
+      <ProductModal
+        isOpen={isProductModalOpen}
+        onClose={() => {
+          setIsProductModalOpen(false);
+          setProductInitialName('');
+        }}
+        initialName={productInitialName}
+        onSaveProduct={handleSaveNewProduct}
       />
     </div>
   );

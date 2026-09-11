@@ -10,6 +10,7 @@ interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   productToEdit?: Product | null;
+  initialName?: string;
   onSaveProduct: (productData: Partial<Product>) => void;
   onDeleteProduct?: (product: Product) => void;
 }
@@ -32,6 +33,7 @@ export default function ProductModal({
   isOpen,
   onClose,
   productToEdit,
+  initialName = '',
   onSaveProduct,
   onDeleteProduct,
 }: ProductModalProps) {
@@ -102,7 +104,7 @@ export default function ProductModal({
       const categoryCode = matchedCat?.code || category.substring(0, 3).toUpperCase();
       const newSku = `SLV-${categoryCode}-925-${randomSuffix}`;
       setSku(newSku);
-      setName('');
+      setName(initialName || '');
       setDescription('');
       setGrossWeight(10.0);
       setStoneWeight(0.0);
@@ -117,7 +119,7 @@ export default function ProductModal({
       setMinStockAlert(2);
       setImageUrl('');
     }
-  }, [productToEdit, isOpen]);
+  }, [productToEdit, isOpen, initialName]);
 
   useEffect(() => {
     if (sku) {
