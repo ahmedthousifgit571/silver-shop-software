@@ -44,6 +44,7 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPurity, setSelectedPurity] = useState('All');
+  const [selectedMetal, setSelectedMetal] = useState<'All' | 'GOLD' | 'SILVER'>('All');
 
   // Modals
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -83,11 +84,25 @@ export default function ProductsPage() {
       (selectedPurity === '925' && p.purity >= 92 && p.purity < 99) ||
       (selectedPurity === '999' && p.purity >= 99) ||
       (selectedPurity === '800' && p.purity < 90);
+    const isGold = p.metalType === 'GOLD' || p.sku?.startsWith('GLD');
+    const matchesMetal =
+      selectedMetal === 'All' ||
+      (selectedMetal === 'GOLD' && isGold) ||
+      (selectedMetal === 'SILVER' && !isGold);
 
-    return matchesSearch && matchesCat && matchesPurity;
+    return matchesSearch && matchesCat && matchesPurity && matchesMetal;
   });
 
-  const getProductRate = (purity: number): number => {
+  const getProductRate = (purity: number, metalType?: string, purityGrade?: string): number => {
+    if (metalType === 'GOLD') {
+      if (purityGrade?.includes('750') || purityGrade?.includes('18K') || (purity > 70 && purity <= 76)) {
+        return Math.round((rates.goldRate916 || 7150) * (75.0 / 91.6));
+      }
+      if (purityGrade?.includes('999') || purityGrade?.includes('24K') || purity >= 99) {
+        return Math.round((rates.goldRate916 || 7150) * (99.9 / 91.6));
+      }
+      return rates.goldRate916 || 7150;
+    }
     if (purity >= 99) return rates.fineRate999;
     if (purity <= 85) return rates.utensilRate800;
     return rates.sterlingRate925;
@@ -194,28 +209,69 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Category Pills (horizontal scroll) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-          {categoryNames.map((cat) => (
+        {/* Category & Metal Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 flex-shrink-0">
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap ${
-                selectedCategory === cat
-                  ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/20'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/60'
+              type="button"
+              onClick={() => setSelectedMetal('All')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                selectedMetal === 'All'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              {cat}
+              All Metals
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setSelectedMetal('GOLD')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                selectedMetal === 'GOLD'
+                  ? 'bg-amber-500 text-white shadow-2xs shadow-amber-500/30'
+                  : 'text-amber-800 hover:text-amber-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-300"></span>
+              Gold
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMetal('SILVER')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                selectedMetal === 'SILVER'
+                  ? 'bg-slate-800 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              Silver
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {categoryNames.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap ${
+                  selectedCategory === cat
+                    ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/20'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/60'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Mobile Card List (< sm screens) */}
       <div className="block sm:hidden space-y-2.5">
         {filteredProducts.map((prod) => {
-          const rate = getProductRate(prod.purity);
+          const isGold = prod.metalType === 'GOLD' || prod.sku?.startsWith('GLD');
+          const rate = getProductRate(prod.purity, isGold ? 'GOLD' : prod.metalType, prod.purityGrade);
           let making = 0;
           if (prod.makingChargeType === 'PER_GRAM') making = prod.netWeight * prod.makingChargeValue;
           else if (prod.makingChargeType === 'FLAT') making = prod.makingChargeValue;
@@ -343,7 +399,8 @@ export default function ProductsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredProducts.map((prod) => {
-                  const rate = getProductRate(prod.purity);
+                  const isGold = prod.metalType === 'GOLD' || prod.sku?.startsWith('GLD');
+                  const rate = getProductRate(prod.purity, isGold ? 'GOLD' : prod.metalType, prod.purityGrade);
                   let making = 0;
                   if (prod.makingChargeType === 'PER_GRAM') making = prod.netWeight * prod.makingChargeValue;
                   else if (prod.makingChargeType === 'FLAT') making = prod.makingChargeValue;

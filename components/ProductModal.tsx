@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, UploadCloud, Tag, CheckCircle2, DollarSign, Scale, Percent, Gem, Plus, Settings, Trash2 } from 'lucide-react';
 import { Product, MakingChargeType, PurityGrade, MetalType, Category } from '@/lib/types';
 import { generateProductQRCode } from '@/lib/qr';
+import { useRates } from '@/context/RatesContext';
 import CategoryManagementModal from './CategoryManagementModal';
 
 interface ProductModalProps {
@@ -29,6 +30,31 @@ const DEFAULT_CATEGORIES = [
   'Giftware',
 ];
 
+export const generateSkuForProduct = (
+  metal: MetalType,
+  catName: string,
+  grade: PurityGrade,
+  cats: Category[]
+): string => {
+  const metalPrefix = (metal as string) === 'GOLD' ? 'GLD' : (metal as string) === 'PLATINUM' ? 'PLT' : 'SLV';
+  const matched = cats.find((c) => c.name.toLowerCase() === (catName || '').toLowerCase());
+  const catCode = matched?.code || (catName ? catName.substring(0, 3).toUpperCase() : 'ANK');
+
+  let purityCode = '925';
+  if (metal === 'GOLD') {
+    if (grade.includes('750') || grade.includes('18K')) purityCode = '750';
+    else if (grade.includes('999') || grade.includes('24K')) purityCode = '999';
+    else purityCode = '916';
+  } else {
+    if (grade.startsWith('999')) purityCode = '999';
+    else if (grade.startsWith('800')) purityCode = '800';
+    else purityCode = '925';
+  }
+
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  return `${metalPrefix}-${catCode}-${purityCode}-${randomSuffix}`;
+};
+
 export default function ProductModal({
   isOpen,
   onClose,
@@ -37,6 +63,8 @@ export default function ProductModal({
   onSaveProduct,
   onDeleteProduct,
 }: ProductModalProps) {
+  const { rates } = useRates();
+
   const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES);
   const [categoriesData, setCategoriesData] = useState<Category[]>([]);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -90,7 +118,7 @@ export default function ProductModal({
       setStoneWeight(productToEdit.stoneWeight);
       setPurity(productToEdit.purity);
       setPurityGrade(productToEdit.purityGrade);
-      setPurchaseRatePerGram(productToEdit.purchaseRatePerGram || 72.0);
+      setPurchaseRatePerGram(productToEdit.purchaseRatePerGram || (productToEdit.metalType === 'GOLD' ? (rates.goldRate916 || 7150) : 72.0));
       setWastagePercentage(productToEdit.wastagePercentage || 0.0);
       setMakingChargeType(productToEdit.makingChargeType);
       setMakingChargeValue(productToEdit.makingChargeValue);
@@ -99,18 +127,19 @@ export default function ProductModal({
       setMinStockAlert(productToEdit.minStockAlert);
       setImageUrl(productToEdit.imageUrl || '');
     } else {
-      const randomSuffix = Math.floor(100 + Math.random() * 900);
-      const matchedCat = categoriesData.find((c) => c.name === category);
-      const categoryCode = matchedCat?.code || category.substring(0, 3).toUpperCase();
-      const newSku = `SLV-${categoryCode}-925-${randomSuffix}`;
-      setSku(newSku);
+      const initialMetal: MetalType = 'SILVER';
+      setMetalType(initialMetal);
+      const initialCat = 'Anklets';
+      setCategory(initialCat);
+      const initialGrade: PurityGrade = '925 Sterling';
+      setPurityGrade(initialGrade);
+      setPurity(92.5);
+      setPurchaseRatePerGram(rates.sterlingRate925 || 72.0);
+      setSku(generateSkuForProduct(initialMetal, initialCat, initialGrade, categoriesData));
       setName(initialName || '');
       setDescription('');
       setGrossWeight(10.0);
       setStoneWeight(0.0);
-      setPurity(92.5);
-      setPurityGrade('925 Sterling');
-      setPurchaseRatePerGram(72.0);
       setWastagePercentage(2.0);
       setMakingChargeType('PER_GRAM');
       setMakingChargeValue(50.0);
@@ -127,6 +156,25 @@ export default function ProductModal({
     }
   }, [sku]);
 
+  const handleMetalChange = (newMetal: MetalType) => {
+    setMetalType(newMetal);
+    if (!productToEdit) {
+      if (newMetal === 'GOLD') {
+        const newGrade: PurityGrade = '916 22K';
+        setPurityGrade(newGrade);
+        setPurity(91.6);
+        setPurchaseRatePerGram(rates.goldRate916 || 7150.0);
+        setSku(generateSkuForProduct('GOLD', category, newGrade, categoriesData));
+      } else {
+        const newGrade: PurityGrade = '925 Sterling';
+        setPurityGrade(newGrade);
+        setPurity(92.5);
+        setPurchaseRatePerGram(rates.sterlingRate925 || 72.0);
+        setSku(generateSkuForProduct('SILVER', category, newGrade, categoriesData));
+      }
+    }
+  };
+
   const handleCategoryChange = (cat: string) => {
     if (cat === '__NEW__') {
       setIsCategoryModalOpen(true);
@@ -134,24 +182,37 @@ export default function ProductModal({
     }
     setCategory(cat);
     if (!productToEdit) {
-      const randomSuffix = Math.floor(100 + Math.random() * 900);
-      const matchedCat = categoriesData.find((c) => c.name === cat);
-      const prefix = matchedCat?.code || cat.substring(0, 3).toUpperCase();
-      setSku(`SLV-${prefix}-${purityGrade.startsWith('999') ? '999' : '925'}-${randomSuffix}`);
+      setSku(generateSkuForProduct(metalType, cat, purityGrade, categoriesData));
     }
   };
 
   const handlePurityGradeChange = (grade: PurityGrade) => {
     setPurityGrade(grade);
-    if (grade === '999 Fine') {
-      setPurity(99.9);
-      setPurchaseRatePerGram(82.0);
-    } else if (grade === '925 Sterling') {
-      setPurity(92.5);
-      setPurchaseRatePerGram(72.0);
-    } else if (grade === '800 Utensil') {
-      setPurity(80.0);
-      setPurchaseRatePerGram(63.0);
+    if (metalType === 'GOLD') {
+      if (grade === '999 Fine') {
+        setPurity(99.9);
+        setPurchaseRatePerGram(Math.round((rates.goldRate916 || 7150.0) * (99.9 / 91.6)));
+      } else if (grade === '750 18K') {
+        setPurity(75.0);
+        setPurchaseRatePerGram(Math.round((rates.goldRate916 || 7150.0) * (75.0 / 91.6)));
+      } else {
+        setPurity(91.6);
+        setPurchaseRatePerGram(rates.goldRate916 || 7150.0);
+      }
+    } else {
+      if (grade === '999 Fine') {
+        setPurity(99.9);
+        setPurchaseRatePerGram(rates.fineRate999 || 82.0);
+      } else if (grade === '800 Utensil') {
+        setPurity(80.0);
+        setPurchaseRatePerGram(rates.utensilRate800 || 63.0);
+      } else {
+        setPurity(92.5);
+        setPurchaseRatePerGram(rates.sterlingRate925 || 72.0);
+      }
+    }
+    if (!productToEdit) {
+      setSku(generateSkuForProduct(metalType, category, grade, categoriesData));
     }
   };
 
@@ -247,6 +308,39 @@ export default function ProductModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Main Category (Metal Selection: Gold vs Silver) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Main Category / Metal Type *
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => handleMetalChange('SILVER')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                  metalType === 'SILVER'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${metalType === 'SILVER' ? 'bg-slate-400 ring-2 ring-slate-200' : 'bg-slate-300'}`}></span>
+                <span>Silver (SLV)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMetalChange('GOLD')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                  metalType === 'GOLD'
+                    ? 'bg-amber-500 text-white shadow-xs shadow-amber-500/30'
+                    : 'text-amber-800 hover:text-amber-900'
+                }`}
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${metalType === 'GOLD' ? 'bg-amber-200 ring-2 ring-amber-300' : 'bg-amber-400'}`}></span>
+                <span>Gold (GLD)</span>
+              </button>
+            </div>
+          </div>
+
           {/* Row 1: Name & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
@@ -256,7 +350,7 @@ export default function ProductModal({
               <input
                 type="text"
                 required
-                placeholder="e.g. Bridal Payal 92.5"
+                placeholder={metalType === 'GOLD' ? 'e.g. Gold Necklace 916' : 'e.g. Bridal Payal 92.5'}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
@@ -293,10 +387,15 @@ export default function ProductModal({
             </div>
           </div>
 
-          {/* Row 2: SKU & Metal Type */}
+          {/* Row 2: SKU & Other Metal Type fallback */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">SKU / Code</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">SKU / Code</label>
+                <span className="text-[10px] font-mono text-slate-400">
+                  Prefix: <strong className={metalType === 'GOLD' ? 'text-amber-600' : 'text-blue-600'}>{metalType === 'GOLD' ? 'GLD' : 'SLV'}</strong>
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -308,9 +407,7 @@ export default function ProductModal({
                 <button
                   type="button"
                   onClick={() => {
-                    const randomSuffix = Math.floor(100 + Math.random() * 900);
-                    const categoryCode = category.substring(0, 3).toUpperCase();
-                    setSku(`SLV-${categoryCode}-925-${randomSuffix}`);
+                    setSku(generateSkuForProduct(metalType, category, purityGrade, categoriesData));
                   }}
                   className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold whitespace-nowrap transition"
                 >
@@ -320,15 +417,15 @@ export default function ProductModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Metal Type</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Metal Specification</label>
               <select
                 value={metalType}
-                onChange={(e) => setMetalType(e.target.value as MetalType)}
+                onChange={(e) => handleMetalChange(e.target.value as MetalType)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none"
               >
-                <option value="SILVER">Silver (Ag)</option>
-                <option value="GOLD">Gold (Au)</option>
-                <option value="PLATINUM">Platinum (Pt)</option>
+                <option value="SILVER">Silver (Ag) — SLV</option>
+                <option value="GOLD">Gold (Au) — GLD</option>
+                <option value="PLATINUM">Platinum (Pt) — PLT</option>
                 <option value="BULLION">Bullion / Coin</option>
               </select>
             </div>
@@ -366,7 +463,9 @@ export default function ProductModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Net Silver Wt</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Net {metalType === 'GOLD' ? 'Gold' : 'Silver'} Wt
+              </label>
               <div className="w-full bg-slate-200/70 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 font-mono">
                 {netWeight.toFixed(2)} g
               </div>
@@ -424,23 +523,44 @@ export default function ProductModal({
           {/* Row 5: Purity Grade & Making Charges */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Purity Standard</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['925 Sterling', '999 Fine', '800 Utensil'] as PurityGrade[]).map((grade) => (
-                  <button
-                    key={grade}
-                    type="button"
-                    onClick={() => handlePurityGradeChange(grade)}
-                    className={`py-1.5 px-1 sm:px-2 rounded-xl text-[11px] sm:text-xs font-semibold transition border ${
-                      purityGrade === grade
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {grade.split(' ')[0]}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Purity Standard ({metalType === 'GOLD' ? 'Gold' : 'Silver'})
+              </label>
+              {metalType === 'GOLD' ? (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['916 22K', '750 18K', '999 Fine'] as PurityGrade[]).map((grade) => (
+                    <button
+                      key={grade}
+                      type="button"
+                      onClick={() => handlePurityGradeChange(grade)}
+                      className={`py-1.5 px-1 sm:px-2 rounded-xl text-[11px] sm:text-xs font-semibold transition border ${
+                        purityGrade === grade
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {grade === '916 22K' ? '916 (22K)' : grade === '750 18K' ? '750 (18K)' : '999 (24K)'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['925 Sterling', '999 Fine', '800 Utensil'] as PurityGrade[]).map((grade) => (
+                    <button
+                      key={grade}
+                      type="button"
+                      onClick={() => handlePurityGradeChange(grade)}
+                      className={`py-1.5 px-1 sm:px-2 rounded-xl text-[11px] sm:text-xs font-semibold transition border ${
+                        purityGrade === grade
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {grade.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

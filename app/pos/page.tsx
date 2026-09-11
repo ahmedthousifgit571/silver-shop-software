@@ -55,6 +55,7 @@ function POSBillingContent() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedMetal, setSelectedMetal] = useState<'ALL' | 'GOLD' | 'SILVER'>('ALL');
 
   // Mobile View Switcher: 'CATALOG' vs 'BILL'
   const [mobileTab, setMobileTab] = useState<'CATALOG' | 'BILL'>('CATALOG');
@@ -255,14 +256,24 @@ function POSBillingContent() {
     setUseAdvanceBalance(false);
   };
 
-  const getProductRate = (purity: number): number => {
+  const getProductRate = (purity: number, metalType?: string, purityGrade?: string): number => {
+    if (metalType === 'GOLD') {
+      if (purityGrade?.includes('750') || purityGrade?.includes('18K') || (purity > 70 && purity <= 76)) {
+        return Math.round((rates.goldRate916 || 7150) * (75.0 / 91.6));
+      }
+      if (purityGrade?.includes('999') || purityGrade?.includes('24K') || purity >= 99) {
+        return Math.round((rates.goldRate916 || 7150) * (99.9 / 91.6));
+      }
+      return rates.goldRate916 || 7150;
+    }
     if (purity >= 99) return rates.fineRate999;
     if (purity <= 85) return rates.utensilRate800;
     return rates.sterlingRate925;
   };
 
   const getWastageAndMaking = (product: Product, quantity = 1) => {
-    const applicableRate = getProductRate(product.purity);
+    const isGold = product.metalType === 'GOLD' || product.sku?.startsWith('GLD');
+    const applicableRate = getProductRate(product.purity, isGold ? 'GOLD' : product.metalType, product.purityGrade);
     const metalVal = product.netWeight * applicableRate * quantity;
     const wastage = metalVal * ((product.wastagePercentage || 0) / 100);
 
@@ -279,7 +290,8 @@ function POSBillingContent() {
   };
 
   const addToCart = (product: Product) => {
-    const applicableRate = getProductRate(product.purity);
+    const isGold = product.metalType === 'GOLD' || product.sku?.startsWith('GLD');
+    const applicableRate = getProductRate(product.purity, isGold ? 'GOLD' : product.metalType, product.purityGrade);
 
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex((item) => item.product.sku === product.sku);
@@ -344,7 +356,10 @@ function POSBillingContent() {
   const handleSaveNewProduct = async (prodData: Partial<Product>) => {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const categoryCode = prodData.category ? prodData.category.substring(0, 3).toUpperCase() : 'ANK';
-    const generatedSku = prodData.sku || `SLV-${categoryCode}-925-${randomSuffix}`;
+    const metalType = prodData.metalType || (prodData.sku?.startsWith('GLD') ? 'GOLD' : 'SILVER');
+    const metalPrefix = (metalType as string) === 'GOLD' ? 'GLD' : (metalType as string) === 'PLATINUM' ? 'PLT' : 'SLV';
+    const purityCode = metalType === 'GOLD' ? '916' : '925';
+    const generatedSku = prodData.sku || `${metalPrefix}-${categoryCode}-${purityCode}-${randomSuffix}`;
 
     const grossWeight = Number(prodData.grossWeight || 10);
     const stoneWeight = Number(prodData.stoneWeight || 0);
@@ -355,7 +370,7 @@ function POSBillingContent() {
       sku: generatedSku,
       name: prodData.name || 'New Jewellery Item',
       category: prodData.category || 'Anklets',
-      metalType: prodData.metalType || 'SILVER',
+      metalType,
       description: prodData.description || '',
       grossWeight,
       stoneWeight,
@@ -592,7 +607,12 @@ function POSBillingContent() {
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
-    return matchesSearch && matchesCat;
+    const isGold = p.metalType === 'GOLD' || p.sku.startsWith('GLD');
+    const matchesMetal =
+      selectedMetal === 'ALL' ||
+      (selectedMetal === 'GOLD' && isGold) ||
+      (selectedMetal === 'SILVER' && !isGold);
+    return matchesSearch && matchesCat && matchesMetal;
   });
 
   return (
@@ -665,20 +685,62 @@ function POSBillingContent() {
               </button>
             </div>
 
-            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs no-scrollbar">
-              {categoryNames.map((cat) => (
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5 text-xs no-scrollbar">
+              {/* Main Metal Filter Tabs */}
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 flex-shrink-0">
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-lg font-semibold transition whitespace-nowrap ${
-                    selectedCategory === cat
-                      ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/20'
-                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/60'
+                  type="button"
+                  onClick={() => setSelectedMetal('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    selectedMetal === 'ALL'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  {cat}
+                  All
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedMetal('GOLD')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    selectedMetal === 'GOLD'
+                      ? 'bg-amber-500 text-white shadow-2xs shadow-amber-500/30'
+                      : 'text-amber-800 hover:text-amber-900'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-300"></span>
+                  Gold
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMetal('SILVER')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    selectedMetal === 'SILVER'
+                      ? 'bg-slate-800 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  Silver
+                </button>
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {categoryNames.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1 rounded-lg font-semibold transition whitespace-nowrap ${
+                      selectedCategory === cat
+                        ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/20'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/60'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -731,8 +793,12 @@ function POSBillingContent() {
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition"
                       />
-                      <span className="absolute top-1 left-1 bg-amber-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
-                        {product.purity}%
+                      <span className={`absolute top-1 left-1 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs ${
+                        product.metalType === 'GOLD' || product.sku.startsWith('GLD')
+                          ? 'bg-amber-600'
+                          : 'bg-slate-700'
+                      }`}>
+                        {product.metalType === 'GOLD' || product.sku.startsWith('GLD') ? 'GLD' : 'SLV'} • {product.purity}%
                       </span>
                     </div>
 

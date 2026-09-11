@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q') || '';
   const category = searchParams.get('category') || '';
+  const metal = searchParams.get('metal') || '';
 
   try {
     const products = await prisma.product.findMany({
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
             }
           : {}),
         ...(category && category !== 'All' ? { category } : {}),
+        ...(metal && metal !== 'All' ? { metalType: metal } : {}),
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -39,6 +41,9 @@ export async function GET(request: Request) {
     if (category && category !== 'All') {
       filtered = filtered.filter((p) => p.category === category);
     }
+    if (metal && metal !== 'All') {
+      filtered = filtered.filter((p) => (p.metalType || 'SILVER') === metal);
+    }
     return NextResponse.json(filtered);
   }
 }
@@ -46,7 +51,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const sku = body.sku || `SLV-${Date.now().toString().slice(-6)}`;
+    const metalType = body.metalType || (body.sku?.startsWith('GLD') ? 'GOLD' : 'SILVER');
+    const metalPrefix = metalType === 'GOLD' ? 'GLD' : metalType === 'PLATINUM' ? 'PLT' : 'SLV';
+    const sku = body.sku || `${metalPrefix}-${Date.now().toString().slice(-6)}`;
     const qrCodeUrl = await generateProductQRCode(sku);
 
     const product = await prisma.product.create({
@@ -54,14 +61,18 @@ export async function POST(request: Request) {
         sku,
         name: body.name,
         category: body.category || 'Anklets',
+        metalType,
         description: body.description || '',
         grossWeight: Number(body.grossWeight),
         stoneWeight: Number(body.stoneWeight || 0),
         netWeight: Number(body.netWeight),
-        purity: Number(body.purity || 92.5),
-        purityGrade: body.purityGrade || '925 Sterling',
+        purity: Number(body.purity || (metalType === 'GOLD' ? 91.6 : 92.5)),
+        purityGrade: body.purityGrade || (metalType === 'GOLD' ? '916 22K' : '925 Sterling'),
+        purchaseRatePerGram: Number(body.purchaseRatePerGram || (metalType === 'GOLD' ? 7150 : 72)),
+        wastagePercentage: Number(body.wastagePercentage || 0),
         makingChargeType: body.makingChargeType || 'PER_GRAM',
         makingChargeValue: Number(body.makingChargeValue || 0),
+        gstPercentage: Number(body.gstPercentage || 3),
         imageUrl: body.imageUrl || null,
         stockQuantity: Number(body.stockQuantity || 1),
         minStockAlert: Number(body.minStockAlert || 2),
@@ -138,4 +149,3 @@ export async function DELETE(request: Request) {
     );
   }
 }
-

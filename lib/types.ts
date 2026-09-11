@@ -2,7 +2,7 @@ export type PurityGrade = '999 Fine' | '925 Sterling' | '800 Utensil' | '916 22K
 export type MakingChargeType = 'PER_GRAM' | 'FLAT' | 'PERCENT';
 export type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'SPLIT' | 'KHATA' | 'ADVANCE_ADJUST';
 export type InvoiceType = 'TAX_INVOICE' | 'NON_GST_BILL' | 'ESTIMATE_QUOTATION';
-export type MetalType = 'SILVER' | 'GOLD' | 'DIAMOND' | 'UTENSIL';
+export type MetalType = 'SILVER' | 'GOLD' | 'DIAMOND' | 'UTENSIL' | 'PLATINUM' | 'BULLION';
 
 export interface Category {
   id: string;
