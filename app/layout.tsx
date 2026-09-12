@@ -7,6 +7,16 @@ import AppShell from '@/components/AppShell';
 export const metadata: Metadata = {
   title: 'Kushal Jewellerys | Retail POS & Inventory Management',
   description: 'Fast Point of Sale Billing, Real-time Silver Rate Engine, Stock Control & Khata CRM for Silver Jewellery Stores',
+  icons: {
+    icon: [
+      { url: '/silvefavicon.png', type: 'image/png' },
+      { url: '/silvefavicon.jpg', type: 'image/jpeg' },
+    ],
+    shortcut: ['/silvefavicon.png'],
+    apple: [
+      { url: '/silvefavicon.png' },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -17,6 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/silvefavicon.png" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/silvefavicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/silvefavicon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
