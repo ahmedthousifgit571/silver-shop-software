@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { SilverRates } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
+import { parseShowcaseRates } from '@/lib/storage';
 
 interface AppHeaderProps {
   rates?: SilverRates;
@@ -59,6 +60,8 @@ export default function AppHeader({
   if (pathname === '/login' || pathname.startsWith('/p/')) {
     return null;
   }
+
+  const showcaseKeys = parseShowcaseRates(rates.displayShowcase);
 
   const currentInfo = PAGE_TITLES[pathname] || {
     title: pathname.replace('/', '').toUpperCase(),
@@ -135,38 +138,43 @@ export default function AppHeader({
           >
             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
             
-            {rates.displayShowcase === '999' ? (
-              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">999 Fine:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.fineRate999}</span>
-              </div>
-            ) : rates.displayShowcase === '800' ? (
-              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">800 Utensil:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.utensilRate800}</span>
-              </div>
-            ) : rates.displayShowcase === '916' ? (
-              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">22K Gold:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.goldRate916 || 7150}</span>
-              </div>
-            ) : rates.displayShowcase === 'ALL' ? (
-              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">925:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
-                <span className="text-amber-300">|</span>
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">999:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.fineRate999}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap">
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">925:</span>
-                <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
-                <span className="text-amber-300 hidden xs:inline">|</span>
-                <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold hidden xs:inline">999:</span>
-                <span className="font-bold text-slate-900 font-mono hidden xs:inline">₹{rates.fineRate999}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap overflow-x-auto no-scrollbar">
+              {showcaseKeys.map((key, idx) => (
+                <React.Fragment key={key}>
+                  {key === '925' && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-800 font-mono text-[10px] sm:text-[11px] font-bold">925:</span>
+                      <span className="font-bold text-slate-900 font-mono">₹{rates.sterlingRate925}</span>
+                    </div>
+                  )}
+                  {key === '999' && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-sky-800 font-mono text-[10px] sm:text-[11px] font-bold">999:</span>
+                      <span className="font-bold text-slate-900 font-mono">₹{rates.fineRate999}</span>
+                    </div>
+                  )}
+                  {key === '800' && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-emerald-800 font-mono text-[10px] sm:text-[11px] font-bold">800:</span>
+                      <span className="font-bold text-slate-900 font-mono">₹{rates.utensilRate800}</span>
+                    </div>
+                  )}
+                  {key === '916' && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-700 font-mono text-[10px] sm:text-[11px] font-bold">22K Gold:</span>
+                      <span className="font-bold text-slate-900 font-mono">₹{rates.goldRate916 || 7150}</span>
+                    </div>
+                  )}
+                  {key === 'SCRAP' && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-rose-800 font-mono text-[10px] sm:text-[11px] font-bold">Scrap:</span>
+                      <span className="font-bold text-slate-900 font-mono">₹{rates.scrapRateBuyback}</span>
+                    </div>
+                  )}
+                  {idx < showcaseKeys.length - 1 && <span className="text-amber-300 mx-0.5">|</span>}
+                </React.Fragment>
+              ))}
+            </div>
           </button>
 
           {/* Quick Action: New Bill Button in Apple Blue */}

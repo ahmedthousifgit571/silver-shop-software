@@ -196,7 +196,7 @@ export default function SettingsPage() {
               Thermal Printer (${printerWidth}) Ready!
             </div>
             <div style="font-size: 6.5px; color: #555; margin-top: 2px;">
-              * Exchange within 7 days against invoice *
+              * Exchange within 3 days against invoice *
             </div>
           </div>
         </body>

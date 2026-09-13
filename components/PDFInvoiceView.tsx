@@ -443,6 +443,13 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
             <p className="text-slate-400 font-medium">Authorized Signatory</p>
           </div>
         </div>
+
+        {/* Thank You Note */}
+        <div className="mt-6 pt-3 text-center border-t border-dashed border-slate-200">
+          <p className="font-bold text-slate-700 text-xs tracking-wider uppercase">
+            Thank You! Visit Again
+          </p>
+        </div>
       </div>
     </div>
   );

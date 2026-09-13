@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, CheckCircle2, Coins, Sparkles, Eye, Plus, Minus } from 'lucide-react';
 import { SilverRates } from '@/lib/types';
+import { parseShowcaseRates } from '@/lib/storage';
 
 interface RateTickerModalProps {
   isOpen: boolean;
@@ -55,13 +56,32 @@ export default function RateTickerModal({
     }, 600);
   };
 
-  const showcaseOptions = [
-    { key: '925', label: '925 Sterling', sub: `₹${formData.sterlingRate925}/g` },
-    { key: '999', label: '999 Fine', sub: `₹${formData.fineRate999}/g` },
-    { key: '800', label: '800 Utensil', sub: `₹${formData.utensilRate800}/g` },
-    { key: '916', label: '22K Gold', sub: `₹${formData.goldRate916}/g` },
-    { key: 'ALL', label: '925 & 999 Combined', sub: `₹${formData.sterlingRate925} | ₹${formData.fineRate999}` },
+  const availableShowcases = [
+    { key: '925', label: '925 Sterling', short: '925', sub: `₹${formData.sterlingRate925}/g`, category: 'Silver' },
+    { key: '999', label: '999 Fine', short: '999', sub: `₹${formData.fineRate999}/g`, category: 'Silver' },
+    { key: '800', label: '800 Utensil', short: '800', sub: `₹${formData.utensilRate800}/g`, category: 'Silver' },
+    { key: '916', label: '22K Gold', short: '22K Gold', sub: `₹${formData.goldRate916 || 7150}/g`, category: 'Gold' },
+    { key: 'SCRAP', label: 'Scrap Buyback', short: 'Scrap', sub: `₹${formData.scrapRateBuyback}/g`, category: 'Exchange' },
   ];
+
+  const selectedShowcases = parseShowcaseRates(formData.displayShowcase);
+
+  const toggleShowcaseRate = (key: string) => {
+    let next: string[];
+    if (selectedShowcases.includes(key)) {
+      if (selectedShowcases.length <= 1) {
+        return;
+      }
+      next = selectedShowcases.filter((k) => k !== key);
+    } else {
+      next = [...selectedShowcases, key];
+    }
+    setFormData((prev) => ({ ...prev, displayShowcase: next.join(',') }));
+  };
+
+  const applyPreset = (keys: string[]) => {
+    setFormData((prev) => ({ ...prev, displayShowcase: keys.join(',') }));
+  };
 
   const sanitizePositiveRate = (val: string): number => {
     const cleaned = val.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
@@ -301,24 +321,69 @@ export default function RateTickerModal({
           </div>
 
           {/* Header Showcase Selector */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-blue-600" />
-              <span>Choose Rate to Showcase on Top Header</span>
-            </label>
-            <p className="text-[11px] text-slate-500">
-              Select which rate or combination appears in the top-right header badge next to &quot;New Bill&quot;.
-            </p>
+          <div className="pt-3 border-t border-slate-100 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Choose Rates to Showcase on Top Header</span>
+                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
+                    Multi-Select
+                  </span>
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Select one or multiple rates (e.g. Silver + Gold) to display near &quot;New Bill&quot;.
+                </p>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => applyPreset(['925', '916'])}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition ${
+                    selectedShowcases.length === 2 && selectedShowcases.includes('925') && selectedShowcases.includes('916')
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                  title="Show 925 Silver and 22K Gold together"
+                >
+                  Silver + Gold
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset(['925', '999'])}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition ${
+                    selectedShowcases.length === 2 && selectedShowcases.includes('925') && selectedShowcases.includes('999')
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  925 & 999
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset(['925', '999', '800', '916'])}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition ${
+                    selectedShowcases.length >= 4
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  All
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-              {showcaseOptions.map((opt) => {
-                const isSelected = (formData.displayShowcase || '925') === opt.key;
+              {availableShowcases.map((opt) => {
+                const isSelected = selectedShowcases.includes(opt.key);
                 return (
                   <button
                     key={opt.key}
                     type="button"
-                    onClick={() => setFormData({ ...formData, displayShowcase: opt.key })}
-                    className={`p-2.5 rounded-xl text-left border transition ${
+                    onClick={() => toggleShowcaseRate(opt.key)}
+                    className={`p-2.5 rounded-xl text-left border transition relative cursor-pointer ${
                       isSelected
                         ? 'bg-blue-50/90 border-blue-500 text-blue-900 shadow-2xs ring-2 ring-blue-500/20'
                         : 'bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -326,7 +391,19 @@ export default function RateTickerModal({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold">{opt.label}</span>
-                      {isSelected && <span className="w-2 h-2 rounded-full bg-blue-600"></span>}
+                      <div
+                        className={`w-4 h-4 rounded flex items-center justify-center border transition ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {isSelected && (
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
                     <span className="text-[11px] font-mono text-slate-500 block mt-0.5 font-medium">
                       {opt.sub}
@@ -334,6 +411,29 @@ export default function RateTickerModal({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Live Header Pill Preview */}
+            <div className="p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between gap-2 text-xs">
+              <span className="text-[10.5px] font-semibold text-amber-900 flex-shrink-0">
+                Live Header Preview:
+              </span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-white/90 border border-amber-200 rounded-lg text-xs overflow-x-auto no-scrollbar">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+                <div className="flex items-center gap-1 text-[11px] font-mono font-bold whitespace-nowrap">
+                  {selectedShowcases.map((k, idx) => {
+                    const match = availableShowcases.find((a) => a.key === k);
+                    if (!match) return null;
+                    return (
+                      <React.Fragment key={k}>
+                        <span className="text-amber-800">{match.short}:</span>
+                        <span className="text-slate-900">{match.sub.split('/')[0]}</span>
+                        {idx < selectedShowcases.length - 1 && <span className="text-amber-300 mx-0.5">|</span>}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 

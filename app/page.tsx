@@ -28,7 +28,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { Product, SilverRates, Invoice, Customer, KhataTransaction } from '@/lib/types';
-import { initialProducts, initialInvoices, initialCustomers } from '@/lib/storage';
+import { initialProducts, initialInvoices, initialCustomers, parseShowcaseRates } from '@/lib/storage';
 import { useAuth } from '@/context/AuthContext';
 import { useRates } from '@/context/RatesContext';
 import CustomerPaymentModal from '@/components/CustomerPaymentModal';
@@ -479,116 +479,131 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* 5 Metal Rate Pills / Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
-          {/* 925 Sterling */}
-          <div
-            onClick={openRateModal}
-            className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
-              (rates.displayShowcase || '925') === '925' || rates.displayShowcase === 'ALL'
-                ? 'bg-amber-50/90 border-amber-300/80 ring-2 ring-amber-500/20 shadow-2xs'
-                : 'bg-white border-slate-200/90 hover:border-amber-200 hover:bg-amber-50/30'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-900">925 Sterling</span>
-              {((rates.displayShowcase || '925') === '925' || rates.displayShowcase === 'ALL') && (
-                <span className="text-[9px] font-bold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded font-mono">
-                  Header
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-              ₹{rates.sterlingRate925}<span className="text-xs text-slate-400 font-normal">/g</span>
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Jewellery & Ornaments</span>
-          </div>
+        {(() => {
+          const showcaseRates = parseShowcaseRates(rates.displayShowcase);
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+              {/* 925 Sterling */}
+              <div
+                onClick={openRateModal}
+                className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
+                  showcaseRates.includes('925')
+                    ? 'bg-amber-50/90 border-amber-300/80 ring-2 ring-amber-500/20 shadow-2xs'
+                    : 'bg-white border-slate-200/90 hover:border-amber-200 hover:bg-amber-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-900">925 Sterling</span>
+                  {showcaseRates.includes('925') && (
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded font-mono">
+                      Header
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
+                  ₹{rates.sterlingRate925}<span className="text-xs text-slate-400 font-normal">/g</span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Jewellery & Ornaments</span>
+              </div>
 
-          {/* 999 Fine Silver */}
-          <div
-            onClick={openRateModal}
-            className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
-              rates.displayShowcase === '999' || rates.displayShowcase === 'ALL'
-                ? 'bg-sky-50/90 border-sky-300/80 ring-2 ring-sky-500/20 shadow-2xs'
-                : 'bg-white border-slate-200/90 hover:border-sky-200 hover:bg-sky-50/30'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-sky-900">999 Fine Silver</span>
-              {(rates.displayShowcase === '999' || rates.displayShowcase === 'ALL') && (
-                <span className="text-[9px] font-bold text-sky-700 bg-sky-100/90 px-1.5 py-0.5 rounded font-mono">
-                  Header
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-              ₹{rates.fineRate999}<span className="text-xs text-slate-400 font-normal">/g</span>
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Coins & Fine Bullion</span>
-          </div>
+              {/* 999 Fine Silver */}
+              <div
+                onClick={openRateModal}
+                className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
+                  showcaseRates.includes('999')
+                    ? 'bg-sky-50/90 border-sky-300/80 ring-2 ring-sky-500/20 shadow-2xs'
+                    : 'bg-white border-slate-200/90 hover:border-sky-200 hover:bg-sky-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-sky-900">999 Fine Silver</span>
+                  {showcaseRates.includes('999') && (
+                    <span className="text-[9px] font-bold text-sky-700 bg-sky-100/90 px-1.5 py-0.5 rounded font-mono">
+                      Header
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
+                  ₹{rates.fineRate999}<span className="text-xs text-slate-400 font-normal">/g</span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Coins & Fine Bullion</span>
+              </div>
 
-          {/* 800 Silver / Utensil */}
-          <div
-            onClick={openRateModal}
-            className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
-              rates.displayShowcase === '800'
-                ? 'bg-emerald-50/90 border-emerald-300/80 ring-2 ring-emerald-500/20 shadow-2xs'
-                : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-emerald-50/30'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-900">800 Silver</span>
-              {rates.displayShowcase === '800' && (
-                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded font-mono">
-                  Header
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-              ₹{rates.utensilRate800}<span className="text-xs text-slate-400 font-normal">/g</span>
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Pooja & Utensils</span>
-          </div>
+              {/* 800 Silver / Utensil */}
+              <div
+                onClick={openRateModal}
+                className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
+                  showcaseRates.includes('800')
+                    ? 'bg-emerald-50/90 border-emerald-300/80 ring-2 ring-emerald-500/20 shadow-2xs'
+                    : 'bg-white border-slate-200/90 hover:border-emerald-200 hover:bg-emerald-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-900">800 Silver</span>
+                  {showcaseRates.includes('800') && (
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded font-mono">
+                      Header
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
+                  ₹{rates.utensilRate800}<span className="text-xs text-slate-400 font-normal">/g</span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Pooja & Utensils</span>
+              </div>
 
-          {/* Old Silver Buyback */}
-          <div
-            onClick={openRateModal}
-            className="cursor-pointer p-3 bg-white border border-slate-200/90 rounded-xl hover:border-rose-200 hover:bg-rose-50/30 transition group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-rose-900">Scrap Buyback</span>
-              <span className="text-[9px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
-                Old Silver
-              </span>
-            </div>
-            <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-              ₹{rates.scrapRateBuyback}<span className="text-xs text-slate-400 font-normal">/g</span>
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Customer Exchange</span>
-          </div>
+              {/* Old Silver Buyback */}
+              <div
+                onClick={openRateModal}
+                className={`cursor-pointer p-3 rounded-xl border transition relative overflow-hidden group ${
+                  showcaseRates.includes('SCRAP')
+                    ? 'bg-rose-50/90 border-rose-300/80 ring-2 ring-rose-500/20 shadow-2xs'
+                    : 'bg-white border-slate-200/90 hover:border-rose-200 hover:bg-rose-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-rose-900">Scrap Buyback</span>
+                  {showcaseRates.includes('SCRAP') ? (
+                    <span className="text-[9px] font-bold text-rose-700 bg-rose-100/90 px-1.5 py-0.5 rounded font-mono">
+                      Header
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                      Old Silver
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
+                  ₹{rates.scrapRateBuyback}<span className="text-xs text-slate-400 font-normal">/g</span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Customer Exchange</span>
+              </div>
 
-          {/* 916 22K Gold */}
-          <div
-            onClick={openRateModal}
-            className={`cursor-pointer col-span-2 sm:col-span-1 p-3 rounded-xl border transition relative overflow-hidden group ${
-              rates.displayShowcase === '916'
-                ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-500/20 shadow-2xs'
-                : 'bg-white border-slate-200/90 hover:border-amber-200 hover:bg-amber-50/30'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-950">22K Gold (916)</span>
-              {rates.displayShowcase === '916' && (
-                <span className="text-[9px] font-bold text-amber-800 bg-amber-200/80 px-1.5 py-0.5 rounded font-mono">
-                  Header
-                </span>
-              )}
+              {/* 916 22K Gold */}
+              <div
+                onClick={openRateModal}
+                className={`cursor-pointer col-span-2 sm:col-span-1 p-3 rounded-xl border transition relative overflow-hidden group ${
+                  showcaseRates.includes('916')
+                    ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-500/20 shadow-2xs'
+                    : 'bg-white border-slate-200/90 hover:border-amber-200 hover:bg-amber-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-950">22K Gold (916)</span>
+                  {showcaseRates.includes('916') && (
+                    <span className="text-[9px] font-bold text-amber-800 bg-amber-200/80 px-1.5 py-0.5 rounded font-mono">
+                      Header
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
+                  ₹{rates.goldRate916 || 7150}<span className="text-xs text-slate-400 font-normal">/g</span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Hallmark Gold Rate</span>
+              </div>
             </div>
-            <div className="mt-1 text-base sm:text-lg font-bold text-slate-900 font-mono tracking-tight">
-              ₹{rates.goldRate916 || 7150}<span className="text-xs text-slate-400 font-normal">/g</span>
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Hallmark Gold Rate</span>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {/* 3. Actionable Alerts Section */}

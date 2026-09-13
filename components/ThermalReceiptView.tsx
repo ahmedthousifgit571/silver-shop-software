@@ -219,7 +219,7 @@ export default function ThermalReceiptView({
               Thank You! Visit Again
             </div>
             <div style="font-size: 6.5px; color: #555; margin-top: 2px;">
-              * Exchange within 7 days against original slip *
+              * Exchange within 3 days against original slip *
             </div>
           </div>
         </body>
@@ -410,7 +410,7 @@ export default function ThermalReceiptView({
             </div>
           )}
           <p className="font-bold text-[9.5px]">Thank You! Visit Again</p>
-          <p className="text-[7px] text-gray-500">* Exchange within 7 days against invoice *</p>
+          <p className="text-[7px] text-gray-500">* Exchange within 3 days against invoice *</p>
         </div>
       </div>
     </div>

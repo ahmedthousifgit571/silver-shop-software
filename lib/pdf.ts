@@ -244,11 +244,11 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   }
 
   // 5. Terms and Signature at Bottom
-  const bottomY = 270;
+  const bottomY = 268;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...textMuted);
-  doc.text(config.terms || 'Terms: 1. Goods exchanged within 7 days against invoice.', 14, bottomY);
+  doc.text(config.terms || 'Terms: 1. Goods exchanged within 3 days against invoice.', 14, bottomY, { maxWidth: 125 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
@@ -256,6 +256,12 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   doc.text(`For ${config.shopName}`, 196, bottomY - 10, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.text('Authorized Signatory', 196, bottomY, { align: 'right' });
+
+  // 6. Thank You Note
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...primaryColor);
+  doc.text('Thank You! Visit Again', 105, bottomY + 11, { align: 'center' });
 
   return doc;
 }
