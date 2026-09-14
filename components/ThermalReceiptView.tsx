@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Printer, ArrowLeft, QrCode } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import { Invoice, ShopConfig } from '@/lib/types';
-import { generateProductQRCode } from '@/lib/qr';
 
 interface ThermalReceiptViewProps {
   invoice: Invoice;
@@ -21,15 +20,6 @@ export default function ThermalReceiptView({
   const [selectedWidth, setSelectedWidth] = useState<'80mm' | '58mm'>(
     initialWidth || config.printerWidth || '80mm'
   );
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-
-  useEffect(() => {
-    // Generate verification QR code for first product or invoice
-    const primarySku = invoice.items[0]?.productSku;
-    if (primarySku) {
-      generateProductQRCode(primarySku).then(setQrCodeUrl);
-    }
-  }, [invoice]);
 
   const formatPayMode = (mode: string) => {
     switch (mode) {
@@ -203,19 +193,9 @@ export default function ThermalReceiptView({
             }
           </div>          </div>
 
-          <!-- QR Code & Footer -->
+          <!-- Receipt Footer -->
           <div class="text-center border-t py-2">
-            ${
-              qrCodeUrl
-                ? `<div style="display: flex; justify-content: center; margin-bottom: 2px;">
-                    <img src="${qrCodeUrl}" style="width: ${qrSize}; height: ${qrSize}; object-fit: contain;" />
-                  </div>
-                  <div style="font-size: 7px; font-weight: bold; text-transform: uppercase;">
-                    Scan to Verify Hallmark Specs
-                  </div>`
-                : ''
-            }
-            <div style="font-size: 8px; font-weight: bold; margin-top: 4px;">
+            <div style="font-size: 8px; font-weight: bold; margin-top: 2px;">
               Thank You! Visit Again
             </div>
             <div style="font-size: 6.5px; color: #555; margin-top: 2px;">
@@ -399,16 +379,8 @@ export default function ThermalReceiptView({
           )}
         </div>
 
-        {/* QR Code & Footer */}
+        {/* Receipt Footer */}
         <div className="text-center pt-2.5 space-y-1">
-          {qrCodeUrl && (
-            <div className="flex flex-col items-center">
-              <img src={qrCodeUrl} alt="Hallmark QR" className="w-14 h-14 object-contain" />
-              <span className="text-[7px] font-bold text-gray-700 uppercase">
-                Scan to Verify Hallmark Specs
-              </span>
-            </div>
-          )}
           <p className="font-bold text-[9.5px]">Thank You! Visit Again</p>
           <p className="text-[7px] text-gray-500">* Exchange within 3 days against invoice *</p>
         </div>

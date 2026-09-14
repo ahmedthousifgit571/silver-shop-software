@@ -35,6 +35,7 @@ async function main() {
       stateCode: '37',
       pincode: '517644',
       printerWidth: '80mm',
+      terms: '1. Goods once sold will be exchanged within 3 days against original invoice. 2. Silver rates calculated on date of billing.',
     },
     create: {
       id: 'default',
@@ -52,6 +53,7 @@ async function main() {
       stateCode: '37',
       pincode: '517644',
       printerWidth: '80mm',
+      terms: '1. Goods once sold will be exchanged within 3 days against original invoice. 2. Silver rates calculated on date of billing.',
     },
   });
 

@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Printer, Download, Share2, ArrowLeft, QrCode, Sparkles, Check, FileText, Receipt } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Download, Share2, ArrowLeft, Sparkles, Check, FileText, Receipt } from 'lucide-react';
 import { Invoice, ShopConfig } from '@/lib/types';
-import { generateProductQRCode } from '@/lib/qr';
 import { generateInvoicePDF } from '@/lib/pdf';
 import ThermalReceiptView from '@/components/ThermalReceiptView';
 
@@ -14,21 +13,7 @@ interface PDFInvoiceViewProps {
 }
 
 export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceViewProps) {
-  const [itemQRs, setItemQRs] = useState<{ [sku: string]: string }>({});
   const [viewMode, setViewMode] = useState<'A4' | 'THERMAL'>('A4');
-
-  useEffect(() => {
-    const generateAll = async () => {
-      const qrs: { [sku: string]: string } = {};
-      for (const item of invoice.items) {
-        if (!qrs[item.productSku]) {
-          qrs[item.productSku] = await generateProductQRCode(item.productSku);
-        }
-      }
-      setItemQRs(qrs);
-    };
-    generateAll();
-  }, [invoice]);
 
   const formatPayMode = (mode: string) => {
     switch (mode) {
@@ -256,7 +241,7 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
             <thead>
               <tr className="border-b-2 border-slate-900 text-slate-900 font-bold uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-2">#</th>
-                <th className="py-3 px-2">Product Description & QR</th>
+                <th className="py-3 px-2">Product Description</th>
                 <th className="py-3 px-2 text-right">Gross Wt</th>
                 <th className="py-3 px-2 text-right">Net Wt</th>
                 <th className="py-3 px-2 text-right">Purity</th>
@@ -268,28 +253,15 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
             </thead>
             <tbody className="divide-y divide-slate-100">
               {invoice.items.map((item, idx) => {
-                const qr = itemQRs[item.productSku];
                 return (
                   <tr key={idx} className="hover:bg-slate-50 transition">
                     <td className="py-3 px-2 text-slate-400 font-medium">{idx + 1}</td>
                     <td className="py-3 px-2">
-                      <div className="flex items-start gap-3">
-                        {qr && (
-                          <img
-                            src={qr}
-                            alt="Item QR"
-                            className="w-12 h-12 object-contain border border-slate-200 rounded p-0.5 flex-shrink-0"
-                          />
-                        )}
-                        <div>
-                          <span className="font-bold text-slate-900 block">{item.productName}</span>
-                          <span className="font-mono text-[10px] text-slate-500">
-                            SKU: {item.productSku} | HSN: {item.hsnCode || '7113'}
-                          </span>
-                          <span className="text-[9px] text-blue-600 font-semibold block mt-0.5">
-                            Scan on mobile for live stock & specs
-                          </span>
-                        </div>
+                      <div>
+                        <span className="font-bold text-slate-900 block">{item.productName}</span>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          SKU: {item.productSku} | HSN: {item.hsnCode || '7113'}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3 px-2 text-right font-medium text-slate-700">
@@ -320,16 +292,24 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
 
         {/* Calculation Summary */}
         <div className="border-t border-slate-200 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-start gap-3">
-            <div className="p-2 bg-slate-900 text-white rounded-xl flex-shrink-0">
-              <QrCode className="w-5 h-5" />
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1.5">
+            <span className="font-bold text-slate-900 block mb-1">Payment Information</span>
+            <div className="flex justify-between text-slate-600">
+              <span>Payment Mode:</span>
+              <span className="font-semibold text-slate-800">{invoice.paymentMode}</span>
             </div>
-            <div className="text-[11px] text-slate-600">
-              <span className="font-bold text-slate-900 block mb-0.5">
-                Instant Smartphone Verification
+            <div className="flex justify-between text-slate-600">
+              <span>Status:</span>
+              <span className={`font-semibold ${invoice.paymentStatus === 'PAID' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {invoice.paymentStatus}
               </span>
-              Scan any QR code on this invoice with your phone camera to check product purity certificate, hallmark details, and store live stock without login.
             </div>
+            {invoice.customerPhone && (
+              <div className="flex justify-between text-slate-600">
+                <span>Customer Contact:</span>
+                <span className="font-mono text-slate-800">{invoice.customerPhone}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5 text-xs text-slate-700 font-medium">
@@ -434,7 +414,12 @@ export default function PDFInvoiceView({ invoice, config, onBack }: PDFInvoiceVi
         <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 gap-4">
           <div className="max-w-md">
             <span className="font-bold text-slate-700 block">Terms & Conditions:</span>
-            <span>{config.terms}</span>
+            <span>
+              {(config.terms || '1. Goods once sold will be exchanged within 3 days against original invoice. 2. Silver rates calculated on date of billing.')
+                .replace(/\s*2\.\s*(?:Silver\s+)?purity\s+(?:certified|guaranteed)\s+as\s+per\s+hallmark\s+(?:standards|specifications)\.?\s*/gi, ' ')
+                .replace(/3\.\s*Silver rates/gi, '2. Silver rates')
+                .trim()}
+            </span>
           </div>
 
           <div className="text-center sm:text-right">

@@ -204,6 +204,6 @@ model ShopConfig {
   stateCode    String?  @default("37")
   pincode      String?  @default("517644")
   logoUrl      String?
-  terms        String?  @default("1. Goods once sold will be exchanged within 3 days against original invoice. 2. Purity certified as per Hallmark standards. 3. Silver rates calculated on date of billing.")
+  terms        String?  @default("1. Goods once sold will be exchanged within 3 days against original invoice. 2. Silver rates calculated on date of billing.")
   printerWidth String?  @default("80mm")
 }

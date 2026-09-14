@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Invoice, ShopConfig } from './types';
-import { generateProductQRCode } from './qr';
 
 export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): Promise<jsPDF> {
   const doc = new jsPDF({
@@ -49,9 +48,10 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
     }
   };
 
+  // Invoice Details Right Aligned
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(...primaryColor);
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
   doc.text(`Invoice No: ${invoice.invoiceNumber}`, 196, 26, { align: 'right' });
   doc.text(`Date: ${new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 196, 31, { align: 'right' });
   doc.text(`Payment: ${formatPayMode(invoice.paymentMode)} (${invoice.paymentStatus})`, 196, 36, { align: 'right' });
@@ -76,23 +76,17 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
     doc.text(`Address: ${invoice.customerAddress}`, 14, 68);
   }
 
-  // Pre-generate QR codes for items to embed in the PDF table
-  const itemRows = await Promise.all(
-    invoice.items.map(async (item, idx) => {
-      const qrData = item.qrCodeUrl || (await generateProductQRCode(item.productSku));
-      return {
-        idx: idx + 1,
-        desc: `${item.productName}\nSKU: ${item.productSku} (Purity: ${item.purity}%)`,
-        grossWt: `${item.grossWeight.toFixed(2)} g`,
-        netWt: `${item.netWeight.toFixed(2)} g`,
-        rate: `Rs. ${item.silverRateApplied.toFixed(2)}/g`,
-        making: `Rs. ${item.makingCharge.toFixed(2)}`,
-        qty: item.quantity || 1,
-        total: `Rs. ${item.totalPrice.toFixed(2)}`,
-        qr: qrData,
-      };
-    })
-  );
+  // Items rows for table
+  const itemRows = invoice.items.map((item, idx) => ({
+    idx: idx + 1,
+    desc: `${item.productName}\nSKU: ${item.productSku} (Purity: ${item.purity}%)`,
+    grossWt: `${item.grossWeight.toFixed(2)} g`,
+    netWt: `${item.netWeight.toFixed(2)} g`,
+    rate: `Rs. ${item.silverRateApplied.toFixed(2)}/g`,
+    making: `Rs. ${item.makingCharge.toFixed(2)}`,
+    qty: item.quantity || 1,
+    total: `Rs. ${item.totalPrice.toFixed(2)}`,
+  }));
 
   // 3. Items Table using autoTable
   (doc as any).autoTable({
@@ -128,29 +122,17 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   // 4. Old Silver Exchange & Calculation Summary
   let currentY = finalY;
 
-  // Left Column: QR Verification info & Notes
+  // Left Column: Payment Summary Box
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
-  doc.text('Verification & Scan Info:', 14, currentY);
+  doc.text('Payment Information:', 14, currentY);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...textMuted);
-  doc.text('Scan product QR codes on your mobile phone camera to', 14, currentY + 5);
-  doc.text('instantly verify live stock, purity, and authenticity.', 14, currentY + 9);
-
-  // If first item has QR code, embed a visual verification QR in footer
-  if (itemRows.length > 0 && itemRows[0].qr) {
-    try {
-      doc.addImage(itemRows[0].qr, 'PNG', 14, currentY + 13, 24, 24);
-      doc.setFontSize(7.5);
-      doc.text(`Scan: ${itemRows[0].desc.split('\n')[0].substring(0, 20)}...`, 42, currentY + 22);
-      doc.text('No login needed for verification', 42, currentY + 27);
-    } catch (e) {
-      console.warn('Could not render QR code in PDF', e);
-    }
-  }
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(`Payment Mode: ${formatPayMode(invoice.paymentMode)}`, 14, currentY + 5);
+  doc.text(`Status: ${invoice.paymentStatus}`, 14, currentY + 10);
 
   // Right Column: Price Breakdown
   const rightX = 130;
@@ -248,7 +230,12 @@ export async function generateInvoicePDF(invoice: Invoice, config: ShopConfig): 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...textMuted);
-  doc.text(config.terms || 'Terms: 1. Goods exchanged within 3 days against invoice.', 14, bottomY, { maxWidth: 125 });
+  const rawTerms = config.terms || 'Terms: 1. Goods exchanged within 3 days against invoice. 2. Silver rates calculated on date of billing.';
+  const sanitizedTerms = rawTerms
+    .replace(/\s*2\.\s*(?:Silver\s+)?purity\s+(?:certified|guaranteed)\s+as\s+per\s+hallmark\s+(?:standards|specifications)\.?\s*/gi, ' ')
+    .replace(/3\.\s*Silver rates/gi, '2. Silver rates')
+    .trim();
+  doc.text(sanitizedTerms, 14, bottomY, { maxWidth: 125 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);

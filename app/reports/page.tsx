@@ -389,7 +389,6 @@ export default function ReportsPage() {
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
                   <th className="py-3 px-3">Bill No.</th>
-                  <th className="py-3 px-3">Type</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Customer</th>
                   <th className="py-3 px-3 text-right">Taxable</th>
@@ -404,15 +403,6 @@ export default function ReportsPage() {
                   <tr key={inv.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-3 px-3 font-mono font-bold text-blue-600">
                       {inv.invoiceNumber}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
-                        {inv.invoiceType === 'ESTIMATE_QUOTATION'
-                          ? 'Estimate'
-                          : inv.invoiceType === 'NON_GST_BILL'
-                          ? 'Non-GST'
-                          : 'GST Bill'}
-                      </span>
                     </td>
                     <td className="py-3 px-3 text-slate-500">
                       {new Date(inv.date || inv.createdAt).toLocaleDateString('en-IN', {

@@ -29,7 +29,7 @@ export const initialShopConfig: ShopConfig = {
   city: 'Srikalahasti',
   state: 'Andhra Pradesh',
   pincode: '517644',
-  terms: '1. Goods once sold can be exchanged within 3 days against original invoice. 2. Purity guaranteed as per Hallmark specifications. 3. Silver rates calculated on date of billing.',
+  terms: '1. Goods once sold can be exchanged within 3 days against original invoice. 2. Silver rates calculated on date of billing.',
   printerWidth: '80mm',
 };
 
