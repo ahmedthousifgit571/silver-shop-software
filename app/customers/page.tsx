@@ -25,10 +25,12 @@ import {
   CheckCircle2,
   CreditCard,
   Filter,
+  Trash2,
 } from 'lucide-react';
 import CustomerModal from '@/components/CustomerModal';
 import CustomerPaymentModal from '@/components/CustomerPaymentModal';
 import RescheduleDueDateModal from '@/components/RescheduleDueDateModal';
+import DeleteCustomerModal from '@/components/DeleteCustomerModal';
 import { Customer, Invoice, KhataTransaction } from '@/lib/types';
 import { initialCustomers, initialInvoices } from '@/lib/storage';
 
@@ -53,6 +55,7 @@ function CustomersCRMContent() {
   // Modals
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(null);
   const [paymentInitialAmount, setPaymentInitialAmount] = useState<number | undefined>(undefined);
@@ -67,11 +70,11 @@ function CustomersCRMContent() {
     fetch('/api/customers')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setCustomers(data);
           setSelectedCustomer((prev) => {
-            if (!prev) return data[0];
-            return data.find((c: Customer) => c.id === prev.id) || data[0];
+            if (!prev) return data[0] || null;
+            return data.find((c: Customer) => c.id === prev.id) || data[0] || null;
           });
         }
       })
@@ -83,6 +86,31 @@ function CustomersCRMContent() {
         if (Array.isArray(data) && data.length > 0) setInvoices(data);
       })
       .catch(() => {});
+  };
+
+  const handleDeleteCustomer = async (cust: Customer) => {
+    try {
+      const res = await fetch(`/api/customers?id=${encodeURIComponent(cust.id)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete customer');
+      }
+      setCustomers((prev) => {
+        const nextList = prev.filter((c) => c.id !== cust.id);
+        setSelectedCustomer((curr) => {
+          if (curr?.id === cust.id) {
+            return nextList[0] || null;
+          }
+          return curr;
+        });
+        return nextList;
+      });
+    } catch (err: any) {
+      console.error('Delete customer error:', err);
+      throw err;
+    }
   };
 
   useEffect(() => {
@@ -921,7 +949,7 @@ function CustomersCRMContent() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 pt-1 sm:pt-0">
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 pt-1 sm:pt-0">
                     <button
                       onClick={() => {
                         setPaymentCustomer(selectedCustomer);
@@ -949,6 +977,15 @@ function CustomersCRMContent() {
                       className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition text-center"
                     >
                       Edit
+                    </button>
+
+                    <button
+                      onClick={() => setCustomerToDelete(selectedCustomer)}
+                      className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold transition text-center flex items-center justify-center gap-1.5 active:scale-98"
+                      title="Permanently Delete Customer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
@@ -1118,6 +1155,13 @@ function CustomersCRMContent() {
         }}
         invoice={selectedInvoiceToReschedule}
         onSaveDueDate={handleSaveDueDate}
+      />
+
+      <DeleteCustomerModal
+        isOpen={!!customerToDelete}
+        customer={customerToDelete}
+        onClose={() => setCustomerToDelete(null)}
+        onConfirmDelete={handleDeleteCustomer}
       />
     </div>
   );

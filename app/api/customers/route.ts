@@ -153,3 +153,75 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  let id = searchParams.get('id');
+  let phone = searchParams.get('phone');
+
+  if (!id && !phone) {
+    try {
+      const body = await request.json();
+      id = body?.id;
+      phone = body?.phone;
+    } catch (e) {}
+  }
+
+  if (!id && !phone) {
+    return NextResponse.json(
+      { error: 'Customer ID or phone is required for deletion' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const customer = id
+      ? await prisma.customer.findUnique({ where: { id } })
+      : await prisma.customer.findUnique({ where: { phone: phone! } });
+
+    if (!customer) {
+      return NextResponse.json({
+        success: true,
+        message: 'Customer deleted',
+        deletedId: id,
+      });
+    }
+
+    // Unlink customer from historical invoices so billing/sales history is preserved
+    try {
+      await prisma.invoice.updateMany({
+        where: { customerId: customer.id },
+        data: { customerId: null },
+      });
+    } catch (invErr) {
+      console.warn('Could not unlink invoices:', invErr);
+    }
+
+    // Delete khata transactions for this customer
+    try {
+      await prisma.khataTransaction.deleteMany({
+        where: { customerId: customer.id },
+      });
+    } catch (khataErr) {
+      console.warn('Could not delete khata transactions:', khataErr);
+    }
+
+    // Hard delete customer record
+    await prisma.customer.delete({
+      where: { id: customer.id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Customer "${customer.name}" permanently deleted`,
+      deletedId: customer.id,
+    });
+  } catch (error: any) {
+    console.error('Error deleting customer:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete customer' },
+      { status: 500 }
+    );
+  }
+}
+

@@ -117,7 +117,12 @@ export async function DELETE(request: Request) {
       : await prisma.product.findUnique({ where: { sku: sku! } });
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({
+        success: true,
+        message: 'Product permanently deleted',
+        deletedId: id,
+        deletedSku: sku,
+      });
     }
 
     // Unlink any invoice items referencing this product to prevent foreign key errors

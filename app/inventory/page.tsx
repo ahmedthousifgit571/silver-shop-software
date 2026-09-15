@@ -48,7 +48,9 @@ export default function InventoryPage() {
   useEffect(() => {
     fetch('/api/products')
       .then((res) => res.json())
-      .then((data) => Array.isArray(data) && data.length > 0 && setProducts(data))
+      .then((data) => {
+        if (Array.isArray(data)) setProducts(data);
+      })
       .catch(() => {});
 
     fetch('/api/categories')

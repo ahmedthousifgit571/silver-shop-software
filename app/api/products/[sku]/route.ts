@@ -81,7 +81,11 @@ export async function DELETE(
     });
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({
+        success: true,
+        message: `Product ${decodedSku} deleted`,
+        deletedSku: decodedSku,
+      });
     }
 
     // Unlink any invoice items referencing this product to maintain sales integrity
