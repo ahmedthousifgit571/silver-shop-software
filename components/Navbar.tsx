@@ -122,8 +122,12 @@ export default function Navbar({
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/25 group-hover:scale-105 transition border border-sky-400/20">
-              <Store className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-2xl bg-white border border-slate-700/60 flex items-center justify-center shadow-lg group-hover:scale-105 transition overflow-hidden p-1">
+              <img
+                src="/silvefavicon.png"
+                alt="Kushal Jewellerys"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="font-black text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5">
@@ -214,7 +218,7 @@ export default function Navbar({
                     {user?.name || 'Store Admin'}
                   </span>
                   <span className="text-[10px] text-emerald-400 font-mono">
-                    {user?.email || 'admin@gmail.com'} ({user?.role || 'ADMIN'})
+                    {user?.email || '9333133334'} ({user?.role || 'ADMIN'})
                   </span>
                 </div>
 

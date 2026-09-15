@@ -54,17 +54,23 @@ export default function DashboardOverviewPage() {
   const loadData = () => {
     fetch('/api/products')
       .then((res) => res.json())
-      .then((data) => Array.isArray(data) && data.length > 0 && setProducts(data))
+      .then((data) => {
+        if (Array.isArray(data)) setProducts(data);
+      })
       .catch(() => {});
 
     fetch('/api/billing')
       .then((res) => res.json())
-      .then((data) => Array.isArray(data) && data.length > 0 && setInvoices(data))
+      .then((data) => {
+        if (Array.isArray(data)) setInvoices(data);
+      })
       .catch(() => {});
 
     fetch('/api/customers')
       .then((res) => res.json())
-      .then((data) => Array.isArray(data) && data.length > 0 && setCustomers(data))
+      .then((data) => {
+        if (Array.isArray(data)) setCustomers(data);
+      })
       .catch(() => {});
   };
 
@@ -201,13 +207,22 @@ export default function DashboardOverviewPage() {
     <div className="max-w-6xl mx-auto px-3 sm:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
       {/* 1. Header with greeting and primary actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Good morning, {user?.name?.split(' ')[0] || 'Admin'}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-normal">
-            Here&apos;s what&apos;s happening in your silver shop today.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/90 shadow-2xs p-1 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img
+              src="/silvefavicon.png"
+              alt="Kushal Jewellerys Logo"
+              className="w-full h-full object-contain rounded-xl"
+            />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Good morning, {user?.name?.split(' ')[0] || 'Store Owner'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-normal">
+              Here&apos;s what&apos;s happening in your silver shop today.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">

@@ -240,3 +240,34 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const inv = searchParams.get('inv');
+  const all = searchParams.get('all');
+
+  try {
+    if (all === 'true') {
+      await prisma.invoiceItem.deleteMany();
+      await prisma.invoice.deleteMany();
+      return NextResponse.json({ success: true, message: 'All invoices cleared' });
+    }
+
+    if (!inv) {
+      return NextResponse.json({ error: 'Invoice number required' }, { status: 400 });
+    }
+
+    await prisma.invoiceItem.deleteMany({
+      where: { invoice: { invoiceNumber: inv } },
+    });
+    await prisma.invoice.delete({
+      where: { invoiceNumber: inv },
+    });
+
+    return NextResponse.json({ success: true, message: `Invoice ${inv} deleted` });
+  } catch (err: any) {
+    console.error('Invoice delete error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+

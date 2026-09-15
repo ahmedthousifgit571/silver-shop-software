@@ -64,9 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Admin login
-    if (cleanEmail === 'admin@gmail.com' && pass === 'admin123') {
+    if (
+      (cleanEmail === '9333133334' && pass === 'Kushal@334') ||
+      (cleanEmail === 'admin@gmail.com' && pass === 'admin123')
+    ) {
       const adminUser: User = {
-        email: 'admin@gmail.com',
+        email: cleanEmail === 'admin@gmail.com' ? 'admin@gmail.com' : '9333133334',
         name: 'Store Owner (Admin)',
         role: 'ADMIN',
       };
@@ -89,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return {
       success: false,
-      error: 'Invalid credentials. Use admin@gmail.com (admin123) or staff@gmail.com (staff123)',
+      error: 'Invalid username or password. Please try again.',
     };
   };
 

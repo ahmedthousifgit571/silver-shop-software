@@ -30,7 +30,7 @@ export default function CategoryManagementModal({
   onCategoriesUpdated,
 }: CategoryManagementModalProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN' || user?.email === 'admin@gmail.com';
+  const isAdmin = user?.role === 'ADMIN' || user?.email === 'admin@gmail.com' || user?.email === '9333133334';
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -475,7 +475,7 @@ export default function CategoryManagementModal({
 
         {/* Footer */}
         <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-          <span>Logged in as Admin ({user?.email || 'admin@gmail.com'})</span>
+          <span>Logged in as Admin ({user?.email || '9333133334'})</span>
           <button
             type="button"
             onClick={onClose}

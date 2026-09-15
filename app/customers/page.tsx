@@ -83,7 +83,7 @@ function CustomersCRMContent() {
     fetch('/api/billing')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setInvoices(data);
+        if (Array.isArray(data)) setInvoices(data);
       })
       .catch(() => {});
   };

@@ -60,8 +60,12 @@ export default function AppSidebar({
       {/* Brand Header */}
       <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-3 overflow-hidden group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-500/20 group-hover:scale-105 transition">
-            <Gem className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-xs flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition overflow-hidden p-0.5">
+            <img
+              src="/silvefavicon.png"
+              alt="Kushal Jewellerys"
+              className="w-full h-full object-contain rounded-lg"
+            />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
@@ -216,7 +220,7 @@ export default function AppSidebar({
                 <span>{user?.name || 'Store Admin'}</span>
               </div>
               <div className="text-[10px] text-slate-500 truncate font-mono">
-                {user?.email || 'admin@gmail.com'}
+                {user?.email || '9333133334'}
               </div>
             </div>
 

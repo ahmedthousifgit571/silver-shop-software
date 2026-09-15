@@ -91,6 +91,10 @@ export default function AppHeader({
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
+          <div className="md:hidden w-7 h-7 rounded-lg bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center overflow-hidden p-0.5 flex-shrink-0">
+            <img src="/silvefavicon.png" alt="Kushal Jewellerys" className="w-full h-full object-contain" />
+          </div>
+
           <div className="min-w-0">
             <h1 className="text-sm sm:text-lg font-bold text-slate-900 leading-tight truncate">
               {currentInfo.title}
@@ -195,8 +199,12 @@ export default function AppHeader({
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
-                    <Gem className="w-4 h-4" />
+                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-xs flex items-center justify-center overflow-hidden p-0.5">
+                    <img
+                      src="/silvefavicon.png"
+                      alt="Kushal Jewellerys"
+                      className="w-full h-full object-contain rounded-lg"
+                    />
                   </div>
                   <div>
                     <span className="font-bold text-sm text-slate-900 block leading-tight">Kushal Jewellerys</span>
@@ -237,7 +245,7 @@ export default function AppHeader({
             <div className="pt-4 border-t border-slate-100 space-y-2">
               <div className="px-3 py-1">
                 <div className="text-xs font-bold text-slate-900 truncate">{user?.name || 'Store Admin'}</div>
-                <div className="text-[10px] text-slate-500 font-mono truncate">{user?.email || 'admin@gmail.com'}</div>
+                <div className="text-[10px] text-slate-500 font-mono truncate">{user?.email || '9333133334'}</div>
               </div>
               <button
                 onClick={() => {
